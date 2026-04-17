@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Naekyoung Kwak — Design Lead</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* light mode (default) */
+  --bg: #faf7f2;
+  --bg-2: #f2ede4;
+  --ink: #1a1815;
+  --ink-2: #433f38;
+  --ink-3: #8a8578;
+  --ink-4: #c9c3b4;
+  --rule: #1a1815;
+  --accent: oklch(0.66 0.16 35);       /* coral */
+  --accent-ink: #faf7f2;
+  --shape-a: oklch(0.72 0.13 35);
+  --shape-b: oklch(0.58 0.11 220);
+  --shape-c: oklch(0.68 0.12 125);
+  --shape-d: oklch(0.55 0.14 330);
+  --shape-e: oklch(0.82 0.09 80);
+
+  --display: 'Fraunces', 'Times New Roman', serif;
+  --serif: 'Source Serif 4', Georgia, serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+[data-theme="dark"] {
+  --bg: #16130f;
+  --bg-2: #201c17;
+  --ink: #f5efe3;
+  --ink-2: #c8c2b2;
+  --ink-3: #8a8578;
+  --ink-4: #3d3930;
+  --rule: #f5efe3;
+  --accent: oklch(0.74 0.15 40);
+  --accent-ink: #16130f;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; padding: 0;
+  background: var(--bg); color: var(--ink);
+  font-family: var(--serif); font-size: 18px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  transition: background .4s ease, color .4s ease;
+}
+a { color: inherit; text-decoration: none; }
+
+/* ---------- Nav ---------- */
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: baseline; gap: 28px;
+  padding: 22px 36px; border-bottom: 1px solid var(--ink-4);
+  background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px);
+}
+.nav .wordmark {
+  font-family: var(--display); font-weight: 500; font-size: 20px;
+  letter-spacing: -0.01em;
+}
+.nav .wordmark .dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); margin-right: 6px; transform: translateY(-3px);
+}
+.nav .links { display: flex; gap: 26px; margin-left: auto; font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; color: var(--ink-2); text-transform: uppercase;}
+.nav .links a { position: relative; transition: color .2s ease; }
+.nav .links a::after {
+  content: ''; position: absolute; left: 0; bottom: -4px; height: 1px; width: 0;
+  background: var(--accent); transition: width .25s ease;
+}
+.nav .links a:hover { color: var(--ink); }
+.nav .links a:hover::after { width: 100%; }
+.nav .links a.on { color: var(--ink); }
+.nav .links a.on::after { width: 100%; }
+
+.theme-toggle {
+  background: transparent; border: 1px solid var(--ink-4);
+  padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; color: var(--ink-2); text-transform: uppercase;
+  transition: all .2s ease; display: inline-flex; align-items: center; gap: 8px;
+}
+.theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
+.theme-toggle .sun-moon { width: 10px; height: 10px; border-radius: 50%; background: var(--ink-2); transition: background .2s, box-shadow .2s; }
+.theme-toggle:hover .sun-moon { background: var(--accent); }
+
+/* ---------- Hero ---------- */
+.hero {
+  padding: 90px 36px 110px;
+  max-width: 1280px; margin: 0 auto;
+  position: relative;
+}
+.hero .kicker {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 10px;
+  margin-bottom: 28px;
+}
+.hero .kicker .live {
+  display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 500;
+}
+.hero .kicker .live::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 0 var(--accent);
+  animation: pulse 2.2s infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); }
+  70% { box-shadow: 0 0 0 9px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.hero h1 {
+  font-family: var(--display);
+  font-weight: 300;
+  font-size: clamp(42px, 7.2vw, 104px);
+  line-height: 1.02;
+  letter-spacing: -0.028em;
+  margin: 0;
+  font-variation-settings: "opsz" 144;
+  max-width: 17ch;
+}
+.hero h1 em {
+  font-style: italic; font-weight: 400; color: var(--accent);
+  font-variation-settings: "opsz" 144, "SOFT" 100;
+}
+.hero h1 .soft { color: var(--ink-2); }
+
+.hero .sub {
+  margin-top: 36px;
+  font-family: var(--serif); font-size: 20px; line-height: 1.55;
+  color: var(--ink-2); max-width: 58ch;
+}
+.hero .sub b { font-weight: 600; color: var(--ink); }
+.hero .sub a {
+  border-bottom: 1px solid var(--accent); padding-bottom: 1px; transition: background .2s, color .2s;
+}
+.hero .sub a:hover { background: var(--accent); color: var(--accent-ink); }
+
+.hero .meta {
+  margin-top: 56px; display: flex; gap: 48px; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); letter-spacing: 0.06em; text-transform: uppercase;
+}
+.hero .meta .row { display: flex; flex-direction: column; gap: 4px; }
+.hero .meta .row b { font-family: var(--serif); font-size: 15px; color: var(--ink); text-transform: none; letter-spacing: 0; font-weight: 500; }
+
+/* floating numbered marker — editorial marginalia */
+.hero .margin-note {
+  position: absolute; right: 36px; top: 120px;
+  width: 200px; font-family: var(--serif); font-size: 14px; font-style: italic;
+  color: var(--ink-3); line-height: 1.5;
+  padding-top: 8px; border-top: 1px solid var(--ink-4);
+}
+.hero .margin-note .n { font-family: var(--mono); font-style: normal; font-size: 10px; color: var(--accent); letter-spacing: 0.1em; display: block; margin-bottom: 6px; }
+
+@media (max-width: 980px) {
+  .hero .margin-note { display: none; }
+}
+
+/* ---------- Section: selected work ---------- */
+.section-header {
+  display: flex; align-items: baseline; gap: 14px;
+  padding: 24px 36px; border-top: 1px solid var(--ink-4); border-bottom: 1px solid var(--ink-4);
+  background: var(--bg);
+}
+.section-header .num { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: 0.18em; }
+.section-header h2 { font-family: var(--display); font-weight: 400; font-size: 22px; margin: 0; letter-spacing: -0.01em; font-style: italic; }
+.section-header .right { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* featured case study */
+.featured {
+  padding: 80px 36px;
+  max-width: 1280px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
+}
+.featured .art {
+  aspect-ratio: 5/4; position: relative; border-radius: 4px; overflow: hidden;
+  background: var(--bg-2);
+  transition: transform .5s ease;
+}
+.featured a:hover .art { transform: translateY(-4px); }
+.featured .mark { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: 0.16em; text-transform: uppercase; }
+.featured h3 {
+  font-family: var(--display); font-weight: 400; font-size: 54px; line-height: 1.02;
+  letter-spacing: -0.02em; margin: 14px 0 20px; max-width: 13ch;
+}
+.featured h3 em { font-style: italic; color: var(--accent); }
+.featured p { font-family: var(--serif); font-size: 17px; line-height: 1.6; color: var(--ink-2); max-width: 48ch; margin: 0 0 20px; }
+.featured .stat { display: flex; gap: 36px; margin: 28px 0; }
+.featured .stat div { border-left: 2px solid var(--accent); padding-left: 12px; }
+.featured .stat b { display: block; font-family: var(--display); font-size: 32px; font-weight: 400; line-height: 1; letter-spacing: -0.01em; }
+.featured .stat span { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.08em; text-transform: uppercase; }
+.featured .readmore {
+  display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); padding-bottom: 4px;
+  border-bottom: 1px solid var(--ink); transition: color .2s, border-color .2s, gap .3s;
+}
+.featured a:hover .readmore { color: var(--accent); border-color: var(--accent); gap: 16px; }
+
+/* ---------- More work grid ---------- */
+.grid-work {
+  padding: 20px 36px 120px;
+  max-width: 1280px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px 32px;
+}
+.card { display: block; cursor: pointer; }
+.card .thumb {
+  aspect-ratio: 4/3; position: relative; border-radius: 4px; overflow: hidden;
+  background: var(--bg-2);
+  transition: transform .5s ease, box-shadow .4s ease;
+}
+.card:hover .thumb { transform: translateY(-6px); box-shadow: 0 18px 40px -24px color-mix(in srgb, var(--ink) 55%, transparent); }
+.card .meta { display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px; gap: 20px; }
+.card .title { font-family: var(--display); font-size: 22px; font-weight: 400; letter-spacing: -0.01em; line-height: 1.2; }
+.card .title em { font-style: italic; }
+.card .company { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.card .desc { font-family: var(--serif); font-size: 14.5px; color: var(--ink-2); line-height: 1.5; margin-top: 6px; max-width: 38ch; }
+
+/* ---------- Note band (editorial pull quote) ---------- */
+.note-band {
+  padding: 100px 36px; text-align: center;
+  border-top: 1px solid var(--ink-4); border-bottom: 1px solid var(--ink-4);
+}
+.note-band .quote {
+  font-family: var(--display); font-weight: 300; font-size: clamp(26px, 3.2vw, 40px);
+  line-height: 1.2; letter-spacing: -0.01em; max-width: 22ch; margin: 0 auto;
+}
+.note-band .quote em { font-style: italic; color: var(--accent); }
+.note-band .byline {
+  font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.18em;
+  text-transform: uppercase; margin-top: 28px;
+}
+
+/* ---------- Footer ---------- */
+footer {
+  padding: 64px 36px 48px;
+  max-width: 1280px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr; gap: 40px;
+  border-top: 1px solid var(--ink-4);
+}
+footer h4 { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.18em; text-transform: uppercase; margin: 0 0 14px; font-weight: 400; }
+footer .big {
+  font-family: var(--display); font-weight: 300; font-size: 36px; line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+footer .big em { font-style: italic; color: var(--accent); }
+footer ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+footer ul a { font-family: var(--serif); font-size: 16px; border-bottom: 1px solid transparent; padding-bottom: 1px; transition: border-color .2s, color .2s; }
+footer ul a:hover { border-color: var(--accent); color: var(--accent); }
+footer .colophon {
+  grid-column: 1 / -1;
+  margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--ink-4);
+  display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.08em; text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+  .featured { grid-template-columns: 1fr; gap: 36px; padding: 48px 24px; }
+  .grid-work { grid-template-columns: 1fr 1fr; padding: 16px 24px 80px; }
+  .hero { padding: 56px 24px 72px; }
+  .nav { padding: 16px 24px; }
+  footer { grid-template-columns: 1fr 1fr; padding: 48px 24px 36px; }
+  .section-header { padding: 20px 24px; }
+  .note-band { padding: 72px 24px; }
+}
+@media (max-width: 580px) {
+  .grid-work { grid-template-columns: 1fr; }
+  footer { grid-template-columns: 1fr; }
+  .hero .meta { gap: 24px; }
+}
+
+/* ---------- Stylized project marks ---------- */
+.mark-svg { width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body data-theme="light">
+
+<nav class="nav">
+  <a href="#" class="wordmark"><span class="dot"></span>Naekyoung</a>
+  <div class="links">
+    <a href="#about">About</a>
+    <a href="#work">Work</a>
+    <a href="#experiments">Experiments</a>
+    <a href="#contact">Contact</a>
+  </div>
+  <button class="theme-toggle" id="themeBtn" title="Toggle theme" style="display:none">
+    <span class="sun-moon"></span>
+    <span class="ttlabel">Dark</span>
+  </button>
+</nav>
+
+<header class="hero" id="about">
+  <div class="kicker">
+    <span>N.Kwak — Design Lead, London</span>
+  </div>
+
+  <h1>
+    I design <em>quiet tools</em> for complicated systems — <span class="soft">mostly in finance, mostly with small teams.</span>
+  </h1>
+
+  <p class="sub">
+    I lead a design team at <b>J.P. Morgan</b> shaping the future state of a firmwide data ecosystem — defining new ways of working through AI enablement and learning in public.
+    Before that: a decade across HSBC, Samsung, and Philips — mostly onboarding, mostly regulated, mostly messy information architectures.
+  </p>
+
+  <div class="meta">
+    <div class="row"><span>Currently</span><b>J.P. Morgan · CIB XD Core</b></div>
+    <div class="row"><span>Based</span><b>London, UK</b></div>
+    <div class="row"><span>Years designing</span><b>Twenty-odd</b></div>
+    <div class="row"><span>Languages</span><b>English · Korean</b></div>
+  </div>
+
+  <aside class="margin-note">
+    <span class="n">¶ A NOTE</span>
+    The work that stays with me tends to be the kind people don't notice — forms that submit, flows that finish, sentences that mean one thing.
+  </aside>
+</header>
+
+<div class="section-header" id="work">
+  <span class="num">¶ 01</span>
+  <h2>Selected work</h2>
+  <span class="right">Eight projects · 2007 — present</span>
+</div>
+
+<!-- Featured -->
+<section class="featured">
+  <a href="#" style="display:block;">
+    <div class="art" id="featuredArt"></div>
+  </a>
+  <div>
+    <div class="mark">¶ Featured — HSBC, 2020—22</div>
+    <h3>Five million customers, <em>two-point-seven</em> minutes.</h3>
+    <p>Redesigning digital banking registration and online ID verification for HSBC — a two-year programme across UK, Hong Kong, Canada, and Singapore. The work sat at the intersection of regulation, trust, and quiet impatience.</p>
+    <div class="stat">
+      <div><b>5.1M</b><span>customers migrated</span></div>
+      <div><b>15→2.7m</b><span>registration time</span></div>
+      <div><b>1d→5m</b><span>ID verification</span></div>
+    </div>
+    <a href="#" class="readmore">Read the case study <span>→</span></a>
+  </div>
+</section>
+
+<!-- Grid -->
+<section class="grid-work">
+  <!-- card template rendered by JS so marks stay in sync -->
+</section>
+
+<!-- Pull quote band -->
+<section class="note-band">
+  <p class="quote">"The interesting part of AI isn't the model — <em>it's how teams change shape</em> around it."</p>
+  <div class="byline">— On AI enablement · current thinking</div>
+</section>
+
+<div class="section-header" id="experiments">
+  <span class="num">¶ 02</span>
+  <h2>Experiments</h2>
+  <span class="right">Side projects · studies · sketches</span>
+</div>
+
+<section class="grid-work" id="experimentsGrid">
+  <!-- rendered by JS -->
+</section>
+
+<!-- Footer -->
+<footer id="contact">
+  <div>
+    <h4>Get in touch</h4>
+    <div class="big">Best reached on <a href="https://www.linkedin.com/in/nkwak/" target="_blank" style="color:var(--accent); border-bottom:1px solid var(--accent); padding-bottom:2px; white-space:nowrap;">linkedin.com/in/nkwak</a></div>
+  </div>
+  <div class="colophon">
+    <span>© 2026 Naekyoung Kwak · Set in Fraunces & Source Serif</span>
+    <span>Crafted in London · last updated Apr 2026</span>
+  </div>
+</footer>
+
+<script>
+/* ---------- theme (dark mode removed) ---------- */
+document.body.dataset.theme = 'light';
+localStorage.removeItem('hi-theme');
+
+/* ---------- project marks (stylized geometric SVGs) ---------- */
+// each returns an SVG string; deterministic, no AI-slop illustration
+
+const marks = {
+  /* ---- experiments (more playful, placeholder) ---- */
+  exp_typeplay: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      <text x="250" y="240" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-weight="300" font-size="220" fill="${colors.accent}">Aa</text>
+      <text x="250" y="310" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="${colors.a}" letter-spacing="4">TYPE STUDIES</text>
+    </svg>`,
+  exp_grid: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      ${Array.from({length:8}).map((_,i)=>Array.from({length:10}).map((__,j)=>{
+        const r = (i*j*7)%5; 
+        const cx = 60+j*42, cy = 60+i*38;
+        if(r===0) return `<circle cx="${cx}" cy="${cy}" r="6" fill="${colors.accent}"/>`;
+        if(r===1) return `<rect x="${cx-5}" y="${cy-5}" width="10" height="10" fill="${colors.b}" opacity="0.5"/>`;
+        return `<circle cx="${cx}" cy="${cy}" r="2" fill="${colors.a}" opacity="0.5"/>`;
+      }).join('')).join('')}
+    </svg>`,
+  exp_motion: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      ${Array.from({length:14}).map((_,i)=>`<path d="M 60 ${120+i*14} Q 250 ${120+i*14 - (i-7)*8} 440 ${120+i*14}" fill="none" stroke="${i===7?colors.accent:colors.a}" stroke-width="${i===7?2:1}" opacity="${i===7?1:0.25}"/>`).join('')}
+    </svg>`,
+  exp_color: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      ${Array.from({length:9}).map((_,i)=>`<rect x="${60+i*42}" y="140" width="36" height="140" fill="${[colors.accent,colors.b,colors.a][i%3]}" opacity="${0.35+(i%3)*0.25}"/>`).join('')}
+      <text x="60" y="320" font-family="JetBrains Mono, monospace" font-size="10" fill="${colors.a}" letter-spacing="3">PALETTE · 09</text>
+    </svg>`,
+  exp_icon: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      <g stroke="${colors.a}" stroke-width="1.5" fill="none" stroke-linecap="round">
+        <circle cx="130" cy="130" r="32"/>
+        <rect x="218" y="98" width="64" height="64" rx="4"/>
+        <path d="M 338 162 L 370 98 L 402 162 Z"/>
+        <path d="M 98 242 h 64 v 64 h -64 z" stroke="${colors.accent}" stroke-width="2"/>
+        <path d="M 218 274 m -32 0 a 32 32 0 1 0 64 0 a 32 32 0 1 0 -64 0"/>
+        <path d="M 338 242 L 402 306 M 402 242 L 338 306"/>
+      </g>
+      <text x="98" y="350" font-family="JetBrains Mono, monospace" font-size="10" fill="${colors.a}" letter-spacing="3">ICON SET · DRAFT</text>
+    </svg>`,
+  exp_sound: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      ${Array.from({length:40}).map((_,i)=>{
+        const h = 20 + Math.abs(Math.sin(i*0.6)*Math.cos(i*0.3))*160;
+        return `<rect x="${60+i*9.5}" y="${200-h/2}" width="5" height="${h}" fill="${i%7===0?colors.accent:colors.a}" opacity="${i%7===0?1:0.4}"/>`;
+      }).join('')}
+    </svg>`,
+  client360: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      <circle cx="250" cy="200" r="150" fill="none" stroke="${colors.a}" stroke-width="1.5"/>
+      <circle cx="250" cy="200" r="110" fill="none" stroke="${colors.a}" stroke-width="1.5" opacity="0.6"/>
+      <circle cx="250" cy="200" r="70" fill="${colors.accent}"/>
+      <circle cx="250" cy="200" r="30" fill="${colors.bg}"/>
+      <g stroke="${colors.a}" stroke-width="1" opacity="0.45">
+        <line x1="100" y1="200" x2="400" y2="200"/>
+        <line x1="250" y1="50" x2="250" y2="350"/>
+      </g>
+      <g fill="${colors.b}"><circle cx="400" cy="200" r="6"/><circle cx="250" cy="50" r="6"/><circle cx="100" cy="200" r="6"/><circle cx="250" cy="350" r="6"/></g>
+    </svg>`,
+  ssis: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      ${[0,1,2,3,4,5,6].map(i => `<line x1="60" y1="${80+i*36}" x2="440" y2="${80+i*36}" stroke="${colors.a}" stroke-width="1" opacity="${0.15+i*0.05}"/>`).join('')}
+      <rect x="110" y="128" width="50" height="14" fill="${colors.accent}"/>
+      <rect x="180" y="128" width="90" height="14" fill="${colors.b}" opacity="0.55"/>
+      <rect x="290" y="128" width="60" height="14" fill="${colors.a}" opacity="0.3"/>
+      <rect x="110" y="164" width="80" height="14" fill="${colors.b}" opacity="0.4"/>
+      <rect x="210" y="164" width="50" height="14" fill="${colors.accent}"/>
+      <rect x="280" y="164" width="100" height="14" fill="${colors.a}" opacity="0.3"/>
+      <rect x="110" y="200" width="40" height="14" fill="${colors.a}" opacity="0.4"/>
+      <rect x="170" y="200" width="70" height="14" fill="${colors.accent}" opacity="0.7"/>
+      <rect x="260" y="200" width="110" height="14" fill="${colors.b}" opacity="0.35"/>
+    </svg>`,
+  wadu: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      ${Array.from({length:7}).map((_,col) => Array.from({length:5}).map((_,row) => {
+        const h = 20 + ((col*3 + row*2) % 7) * 18;
+        const color = (col+row)%3===0 ? colors.accent : (col+row)%3===1 ? colors.b : colors.a;
+        const opacity = (col+row)%3===0 ? 1 : 0.35;
+        return `<rect x="${80 + col*50}" y="${320 - h}" width="30" height="${h}" fill="${color}" opacity="${opacity}"/>`;
+      }).join('')).join('')}
+      <line x1="60" y1="320" x2="440" y2="320" stroke="${colors.a}" stroke-width="1.5"/>
+    </svg>`,
+  hsbcOnboarding: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      <rect x="160" y="80" width="180" height="240" rx="22" fill="none" stroke="${colors.a}" stroke-width="1.5"/>
+      <rect x="175" y="110" width="150" height="8" fill="${colors.a}" opacity="0.35"/>
+      <rect x="175" y="130" width="100" height="8" fill="${colors.a}" opacity="0.35"/>
+      <rect x="175" y="160" width="150" height="30" rx="4" fill="${colors.accent}"/>
+      <rect x="175" y="200" width="150" height="12" fill="${colors.a}" opacity="0.25"/>
+      <rect x="175" y="218" width="110" height="12" fill="${colors.a}" opacity="0.25"/>
+      <rect x="175" y="248" width="150" height="40" rx="4" fill="${colors.b}" opacity="0.75"/>
+      <circle cx="250" cy="268" r="6" fill="${colors.bg}"/>
+      <circle cx="250" cy="65" r="3" fill="${colors.a}" opacity="0.6"/>
+    </svg>`,
+  idverify: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      <rect x="110" y="120" width="280" height="170" rx="6" fill="${colors.b}" opacity="0.25" stroke="${colors.a}" stroke-width="1.2"/>
+      <circle cx="175" cy="200" r="34" fill="${colors.a}" opacity="0.3"/>
+      <rect x="225" y="170" width="140" height="10" fill="${colors.a}" opacity="0.4"/>
+      <rect x="225" y="190" width="100" height="10" fill="${colors.a}" opacity="0.3"/>
+      <rect x="225" y="215" width="120" height="10" fill="${colors.a}" opacity="0.3"/>
+      <g stroke="${colors.accent}" stroke-width="3" fill="none">
+        <path d="M 340 140 L 340 120 L 360 120"/>
+        <path d="M 140 120 L 120 120 L 120 140"/>
+        <path d="M 360 290 L 360 270 L 340 270"/>
+        <path d="M 120 270 L 120 290 L 140 290"/>
+      </g>
+    </svg>`,
+  auth: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      ${[80, 140, 200, 260, 320, 380].map((x,i) => `
+        <rect x="${x}" y="${160 - i*4}" width="28" height="${80 + i*8}" rx="2" fill="${i%2===0?colors.accent:colors.b}" opacity="${i%2===0?0.9:0.35}"/>
+      `).join('')}
+      <circle cx="420" cy="120" r="28" fill="none" stroke="${colors.a}" stroke-width="1.5"/>
+      <circle cx="420" cy="120" r="10" fill="${colors.accent}"/>
+    </svg>`,
+  tungsten: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      <rect x="80" y="80" width="340" height="240" fill="none" stroke="${colors.a}" stroke-width="1.2"/>
+      <rect x="80" y="80" width="340" height="40" fill="${colors.a}" opacity="0.1"/>
+      <rect x="100" y="140" width="90" height="160" fill="${colors.b}" opacity="0.3"/>
+      <rect x="210" y="140" width="100" height="70" fill="${colors.accent}"/>
+      <rect x="210" y="220" width="100" height="80" fill="${colors.a}" opacity="0.15"/>
+      <rect x="330" y="140" width="70" height="160" fill="${colors.a}" opacity="0.2"/>
+      <circle cx="100" cy="100" r="4" fill="${colors.accent}"/>
+      <circle cx="114" cy="100" r="4" fill="${colors.b}"/>
+      <circle cx="128" cy="100" r="4" fill="${colors.a}" opacity="0.4"/>
+    </svg>`,
+  touchwiz: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      <rect x="180" y="60" width="140" height="280" rx="18" fill="none" stroke="${colors.a}" stroke-width="1.5"/>
+      <rect x="190" y="80" width="120" height="200" fill="${colors.a}" opacity="0.08"/>
+      ${[0,1,2,3].map(r => [0,1,2].map(c => {
+        const i = r*3+c;
+        const fill = i%4===0 ? colors.accent : i%4===1 ? colors.b : i%4===2 ? colors.a : colors.bg;
+        const opacity = i%4===3 ? 1 : 0.85;
+        return `<rect x="${200 + c*34}" y="${96 + r*42}" width="24" height="24" rx="4" fill="${fill}" opacity="${opacity}" stroke="${colors.a}" stroke-width="${i%4===3?'1':'0'}"/>`;
+      }).join('')).join('')}
+      <circle cx="250" cy="315" r="12" fill="none" stroke="${colors.a}" stroke-width="1.5"/>
+    </svg>`
+};
+
+function currentColors() {
+  const cs = getComputedStyle(document.body);
+  return {
+    bg: cs.getPropertyValue('background-color'),
+    a: cs.getPropertyValue('--ink').trim(),
+    accent: cs.getPropertyValue('--accent').trim(),
+    b: cs.getPropertyValue('--shape-b').trim(),
+    c: cs.getPropertyValue('--shape-c').trim(),
+    d: cs.getPropertyValue('--shape-d').trim(),
+    e: cs.getPropertyValue('--shape-e').trim(),
+  };
+}
+
+/* featured art */
+function renderFeatured() {
+  const colors = currentColors();
+  document.getElementById('featuredArt').innerHTML = marks.hsbcOnboarding(colors);
+}
+
+/* grid cards */
+const WORK = [
+  {key:'client360', title:'Client 360', em:'', company:'J.P. Morgan · 2023—now', desc:'UX architecture across a firmwide data ecosystem — one canonical view of the client.'},
+  {key:'ssis', title:'SSIs Standardisation', em:'', company:'J.P. Morgan · 2024', desc:'A standardised template for Standing Settlement Instructions — contributed to the FMSB draft based on ISO 20022.'},
+  {key:'wadu', title:'WADU 2.0', em:'', company:'J.P. Morgan · 2023', desc:'Conceptual designs for firmwide HR tooling powered by the Workforce Activity Data Utility.'},
+  {key:'idverify', title:'ID Verification', em:'', company:'HSBC · 2020—22', desc:'Self-verify mobile flow for account opening and credential recovery.'},
+  {key:'auth', title:'User Authentication', em:'', company:'HSBC · 2020—22', desc:'Research-led end-to-end auth — QR, push, biometrics, secure codes.'},
+  {key:'touchwiz', title:'TouchWiz 1.0 Japan', em:'', company:'Samsung · 2007—08', desc:'Localisation of Samsung\u2019s first mobile touch interface for NTT Docomo and SoftBank.'},
+];
+
+function renderGrid() {
+  const colors = currentColors();
+  const root = document.querySelector('.grid-work');
+  root.innerHTML = WORK.map(w => `
+    <a href="#" class="card" aria-label="${w.title}">
+      <div class="thumb">${marks[w.key](colors)}</div>
+      <div class="meta">
+        <span class="title">${w.title}</span>
+        <span class="company">${w.company}</span>
+      </div>
+      <div class="desc">${w.desc}</div>
+    </a>
+  `).join('');
+}
+
+const EXPERIMENTS = [
+  {key:'exp_typeplay', title:'Type Studies', em:'', company:'Ongoing · 2024—', desc:'Pairings, spacing tests, and italic explorations — notes from daily typesetting.'},
+  {key:'exp_grid', title:'Generative Grids', em:'', company:'Weekend · 2024', desc:'Small SVG sketches exploring rhythm, noise, and modular composition.'},
+  {key:'exp_motion', title:'Motion Studies', em:'', company:'Weekend · 2023', desc:'Micro-interactions and easing curves — quiet motion for dense interfaces.'},
+  {key:'exp_color', title:'Palette Draft', em:'', company:'Ongoing · 2025', desc:'Muted, functional palettes for regulated products — warmth without noise.'},
+  {key:'exp_icon', title:'Icon Set Draft', em:'', company:'Weekend · 2025', desc:'A restrained line-icon family for data-heavy tools — 1.5px, hand-weighted.'},
+  {key:'exp_sound', title:'Sound Sketches', em:'', company:'Weekend · 2024', desc:'Tiny audio cues for notifications and state changes — felt, not heard.'},
+];
+
+function renderExperiments() {
+  const colors = currentColors();
+  const root = document.getElementById('experimentsGrid');
+  if (!root) return;
+  root.innerHTML = EXPERIMENTS.map(w => `
+    <a href="#" class="card" aria-label="${w.title}">
+      <div class="thumb">${marks[w.key](colors)}</div>
+      <div class="meta">
+        <span class="title">${w.title}</span>
+        <span class="company">${w.company}</span>
+      </div>
+      <div class="desc">${w.desc}</div>
+    </a>
+  `).join('');
+}
+
+function renderAll() { renderFeatured(); renderGrid(); renderExperiments(); }
+renderAll();
+
+/* ---------- scroll-spy for nav ---------- */
+(function(){
+  const navLinks = document.querySelectorAll('.nav .links a');
+  const map = {};
+  navLinks.forEach(a => {
+    const id = a.getAttribute('href').replace('#','');
+    const sec = document.getElementById(id);
+    if (sec) map[id] = { link: a, sec };
+  });
+  const ids = Object.keys(map);
+  function onScroll() {
+    const y = window.scrollY + 120;
+    let current = ids[0];
+    for (const id of ids) {
+      if (map[id].sec.offsetTop <= y) current = id;
+    }
+    // If scrolled to the bottom, snap to the last nav item (Contact)
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+      current = ids[ids.length - 1];
+    }
+    navLinks.forEach(a => a.classList.remove('on'));
+    if (map[current]) map[current].link.classList.add('on');
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
+/* theme observer removed */
+
+/* fade-in on scroll */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity = 1; e.target.style.transform = 'translateY(0)'; } });
+}, { threshold: 0.12 });
+document.querySelectorAll('.featured, .grid-work .card, .note-band, footer').forEach(el => {
+  el.style.opacity = 0;
+  el.style.transform = 'translateY(12px)';
+  el.style.transition = 'opacity .7s ease, transform .7s ease';
+  observer.observe(el);
+});
+</script>
+</body>
+</html>
