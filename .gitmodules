@@ -1,0 +1,3 @@
+[submodule "portfolio-next"]
+	path = portfolio-next
+	url = https://github.com/naekyoung/portfolio-next.git
