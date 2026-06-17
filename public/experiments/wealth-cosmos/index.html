@@ -147,8 +147,10 @@
 <div class="controls" role="tablist" aria-label="View mode">
   <button id="btnCosmos" class="active" onclick="setView('cosmos')">Cosmos</button>
   <button id="btnLineup" onclick="setView('lineup')">Lineup</button>
+  <button id="btnRefresh" onclick="refreshData()" title="Simulate a live market tick" aria-label="Refresh data">↻ Refresh</button>
 </div>
 <div class="legendnote" id="note">A solar system of money · everything orbits Musk</div>
+<div class="legendnote" id="stamp" aria-live="polite"></div>
 
 <div id="cosmos" aria-live="polite"><canvas id="orbits"></canvas></div>
 
@@ -411,9 +413,38 @@ function setView(v){
   v==='cosmos' ? startCosmos() : layoutLineup();
 }
 
+// ---------- refresh: simulate a live market tick ----------
+// Real Forbes figures aren't available from a static page, so each refresh
+// jitters every fortune ±2% around its true base value (it fluctuates rather
+// than drifts) to mimic a live market, then re-renders.
+const BASE_WORTH = PEOPLE.map(p => p.worth);
+let currentPerson = null;
+
+function updateLabels(){
+  orbs.forEach((el,i)=>{
+    const p = PEOPLE[i];
+    el.setAttribute('aria-label', `${p.name}, ${fmtWorth(p.worth)}`);
+    el.querySelector('.lbl').innerHTML = `<b>${p.name}</b>${fmtWorth(p.worth)}`;
+  });
+}
+function stampNow(){
+  const el = document.getElementById('stamp');
+  if(el) el.textContent = 'Last updated ' + new Date().toLocaleTimeString();
+}
+function refreshData(){
+  PEOPLE.forEach((p,i)=>{
+    p.worth = Math.round(BASE_WORTH[i] * (1 + (Math.random()-0.5)*0.04)); // ±2%
+  });
+  updateLabels();
+  view==='cosmos' ? startCosmos() : layoutLineup();
+  if(currentPerson) openPanel(currentPerson);   // keep open detail in sync
+  stampNow();
+}
+
 // ---------- detail panel ----------
 const panel = document.getElementById('panel');
 function openPanel(p){
+  currentPerson = p;
   document.getElementById('pRank').textContent = `RANK ${p.rank.toLocaleString()} / 3,400+`;
   document.getElementById('pName').textContent = p.name;
   document.getElementById('pWorth').innerHTML = p.worth >= 1000
@@ -438,6 +469,7 @@ function factClean(p){
   return `${pctStr}% the size of Musk's fortune. Even so, spending $1,000 every single day, it would take about ${years} years to run out — modern humans have existed for ~300,000.`;
 }
 function closePanel(){
+  currentPerson = null;
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden','true');
 }
@@ -515,7 +547,7 @@ addEventListener('resize', ()=>{
   initStars(); if(reduceMotion) draw();
   view==='cosmos' ? startCosmos() : layoutLineup();
 });
-initStars(); draw(); startCosmos();
+initStars(); draw(); startCosmos(); stampNow();
 </script>
 </body>
 </html>
