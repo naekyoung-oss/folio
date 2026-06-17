@@ -419,12 +419,6 @@ const marks = {
       </g>
       <text x="60" y="360" font-family="JetBrains Mono, monospace" font-size="10" fill="${colors.a}" letter-spacing="3">WEALTH · COSMOS</text>
     </svg>`,
-  exp_typeplay: (colors) => `
-    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
-      <rect width="500" height="400" fill="${colors.bg}"/>
-      <text x="250" y="250" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-weight="500" font-size="220" fill="${colors.accent}" letter-spacing="-10">Aa</text>
-      <text x="250" y="320" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="${colors.a}" letter-spacing="0">Type studies</text>
-    </svg>`,
   exp_grid: (colors) => `
     <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
       <rect width="500" height="400" fill="${colors.bg}"/>
@@ -440,25 +434,6 @@ const marks = {
     <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
       <rect width="500" height="400" fill="${colors.bg}"/>
       ${Array.from({length:14}).map((_,i)=>`<path d="M 60 ${120+i*14} Q 250 ${120+i*14 - (i-7)*8} 440 ${120+i*14}" fill="none" stroke="${i===7?colors.accent:colors.a}" stroke-width="${i===7?2:1}" opacity="${i===7?1:0.25}"/>`).join('')}
-    </svg>`,
-  exp_color: (colors) => `
-    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
-      <rect width="500" height="400" fill="${colors.bg}"/>
-      ${Array.from({length:9}).map((_,i)=>`<rect x="${60+i*42}" y="140" width="36" height="140" fill="${[colors.accent,colors.b,colors.a][i%3]}" opacity="${0.35+(i%3)*0.25}"/>`).join('')}
-      <text x="60" y="320" font-family="JetBrains Mono, monospace" font-size="10" fill="${colors.a}" letter-spacing="3">PALETTE · 09</text>
-    </svg>`,
-  exp_icon: (colors) => `
-    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
-      <rect width="500" height="400" fill="${colors.bg}"/>
-      <g stroke="${colors.a}" stroke-width="1.5" fill="none" stroke-linecap="round">
-        <circle cx="130" cy="130" r="32"/>
-        <rect x="218" y="98" width="64" height="64" rx="4"/>
-        <path d="M 338 162 L 370 98 L 402 162 Z"/>
-        <path d="M 98 242 h 64 v 64 h -64 z" stroke="${colors.accent}" stroke-width="2"/>
-        <path d="M 218 274 m -32 0 a 32 32 0 1 0 64 0 a 32 32 0 1 0 -64 0"/>
-        <path d="M 338 242 L 402 306 M 402 242 L 338 306"/>
-      </g>
-      <text x="98" y="350" font-family="JetBrains Mono, monospace" font-size="10" fill="${colors.a}" letter-spacing="3">ICON SET · DRAFT</text>
     </svg>`,
   exp_sound: (colors) => `
     <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
@@ -618,12 +593,9 @@ function renderGrid() {
 const EXPERIMENTS = [
   {key:'exp_cube', title:'Cube Navigation', em:'', company:'Weekend · 2026', desc:'A spatial navigation prototype — rotating cube faces as a menu.', url:'/folio/experiments/cube-navigation/'},
   {key:'exp_wealth', title:'The Wealth Cosmos', em:'', company:'Weekend · 2026', desc:'An interactive data-viz concept — Forbes 2026 wealth mapped as an orbiting cosmos.', url:'/folio/experiments/wealth-cosmos/'},
-  {key:'exp_typeplay', title:'Type Studies', em:'', company:'Ongoing · 2024—', desc:'Pairings, spacing tests, and italic explorations — notes from daily typesetting.'},
-  {key:'exp_grid', title:'Generative Grids', em:'', company:'Weekend · 2024', desc:'Small SVG sketches exploring rhythm, noise, and modular composition.'},
-  {key:'exp_motion', title:'Motion Studies', em:'', company:'Weekend · 2023', desc:'Micro-interactions and easing curves — quiet motion for dense interfaces.'},
-  {key:'exp_color', title:'Palette Draft', em:'', company:'Ongoing · 2025', desc:'Muted, functional palettes for regulated products — warmth without noise.'},
-  {key:'exp_icon', title:'Icon Set Draft', em:'', company:'Weekend · 2025', desc:'A restrained line-icon family for data-heavy tools — 1.5px, hand-weighted.'},
-  {key:'exp_sound', title:'Sound Sketches', em:'', company:'Weekend · 2024', desc:'Tiny audio cues for notifications and state changes — felt, not heard.'},
+  {key:'exp_grid', title:'Generative Grids', em:'', company:'Weekend · 2026', desc:'A live generative-art engine — flow-field swarms, Game of Life, and a rippling wave mesh you can push around.', url:'/folio/experiments/generative-grids/'},
+  {key:'exp_motion', title:'Motion Studies', em:'', company:'Weekend · 2026', desc:'An interactive physics lab — fling spring cloth, a pendulum wave, a magnet swarm, and easing curves racing live.', url:'/folio/experiments/motion-studies/'},
+  {key:'exp_sound', title:'Sound Sketches', em:'', company:'Weekend · 2026', desc:'A playable Web Audio synth — real-time visualizer, looping step sequencer, and keyboard pads. No samples.', url:'/folio/experiments/sound-sketches/'},
 ];
 
 function renderExperiments() {

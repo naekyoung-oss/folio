@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion Studies</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;500;700&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --space:#070B1A; --space-2:#0D1330; --star:#EAF0FF;
+    --gold:#F5C84B; --dim:#7E89B0; --line:rgba(126,137,176,.25);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:var(--space);color:var(--star);font-family:'Space Grotesk',sans-serif;overflow:hidden}
+  canvas#c{position:fixed;inset:0;z-index:0;display:block;cursor:grab}
+  canvas#c.grabbing{cursor:grabbing}
+
+  .hud{position:fixed;z-index:2;left:0;right:0;top:0;padding:22px 24px;
+    display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px;
+    background:linear-gradient(180deg, rgba(7,11,26,.85), transparent);pointer-events:none}
+  .hud > *{pointer-events:auto}
+  .titles .eyebrow{font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+  .titles h1{font-family:'Unbounded',sans-serif;font-weight:700;font-size:clamp(20px,3vw,32px);line-height:1}
+  .titles p{color:var(--dim);font-size:12px;margin-top:6px;max-width:44ch;line-height:1.5}
+  .controls{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  button{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:500;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--dim);background:rgba(13,19,48,.6);backdrop-filter:blur(8px);
+    border:1px solid var(--line);border-radius:999px;padding:8px 16px;cursor:pointer;transition:all .2s}
+  button:hover{color:var(--star);border-color:var(--dim)}
+  button.active{color:var(--space);background:var(--gold);border-color:var(--gold);box-shadow:0 0 22px rgba(245,200,75,.35)}
+  button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  .hint{position:fixed;z-index:2;left:0;right:0;bottom:0;text-align:center;color:var(--dim);
+    font-size:11px;letter-spacing:.08em;padding:16px;background:linear-gradient(0deg, rgba(7,11,26,.85), transparent);pointer-events:none}
+  .hint b{color:var(--gold);font-weight:500}
+  @media (max-width:680px){ .controls{margin-left:0;justify-content:flex-start} }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">
+  <div class="titles">
+    <div class="eyebrow">Motion · Physics</div>
+    <h1>Motion Studies</h1>
+    <p>Easing curves you can feel. Grab, fling and watch real spring dynamics settle — then compare the classic curves racing live.</p>
+  </div>
+  <div class="controls" role="tablist" aria-label="Study">
+    <button class="active" data-mode="cloth">Spring Cloth</button>
+    <button data-mode="pendulum">Pendulum Wave</button>
+    <button data-mode="magnet">Magnet Swarm</button>
+    <button data-mode="easing">Easing Lab</button>
+  </div>
+</div>
+<div class="hint" id="hint"></div>
+
+<script>
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const hint = document.getElementById('hint');
+let W,H,DPR, mode='cloth';
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const mouse = { x:-9999, y:-9999, down:false, px:0, py:0 };
+let grabbed = null;
+
+function resize(){
+  DPR=Math.min(2,devicePixelRatio||1); W=innerWidth; H=innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+'px'; cv.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0); initMode();
+}
+addEventListener('resize', resize);
+cv.addEventListener('pointermove', e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
+cv.addEventListener('pointerdown', e=>{ mouse.down=true; mouse.x=e.clientX; mouse.y=e.clientY; cv.classList.add('grabbing'); onDown(); });
+addEventListener('pointerup', ()=>{ mouse.down=false; grabbed=null; cv.classList.remove('grabbing'); });
+cv.addEventListener('pointerleave', ()=>{ mouse.x=mouse.y=-9999; });
+
+// ---------- SPRING CLOTH ----------
+let nodes=[], links=[], cc, cr, cgap;
+function initCloth(){
+  cgap = Math.max(34, Math.round(Math.min(W,H)/16));
+  cc = Math.floor(W/cgap)-1; cr = Math.floor(H/cgap)-1;
+  const ox = (W-(cc-1)*cgap)/2, oy = cgap*1.4;
+  nodes=[]; links=[];
+  for(let y=0;y<cr;y++) for(let x=0;x<cc;x++){
+    nodes.push({x:ox+x*cgap, y:oy+y*cgap, px:ox+x*cgap, py:oy+y*cgap, pin:y===0&&(x%3===0||x===cc-1)});
+  }
+  const idx=(x,y)=>y*cc+x;
+  for(let y=0;y<cr;y++) for(let x=0;x<cc;x++){
+    if(x<cc-1) links.push([idx(x,y),idx(x+1,y),cgap]);
+    if(y<cr-1) links.push([idx(x,y),idx(x,y+1),cgap]);
+  }
+}
+function onDown(){
+  if(mode==='cloth'){
+    let best=null,bd=900;
+    for(const n of nodes){ const d=(n.x-mouse.x)**2+(n.y-mouse.y)**2; if(d<bd){bd=d;best=n;} }
+    grabbed=best;
+  } else if(mode==='magnet'){ /* attract handled in loop */ }
+}
+function stepCloth(){
+  const g=0.45, damp=0.99;
+  for(const n of nodes){
+    if(n===grabbed){ n.x=mouse.x; n.y=mouse.y; n.px=mouse.x; n.py=mouse.y; continue; }
+    if(n.pin) continue;
+    const vx=(n.x-n.px)*damp, vy=(n.y-n.py)*damp;
+    n.px=n.x; n.py=n.y; n.x+=vx; n.y+=vy+g;
+  }
+  for(let k=0;k<3;k++) for(const [a,b,rest] of links){
+    const na=nodes[a], nb=nodes[b];
+    let dx=nb.x-na.x, dy=nb.y-na.y; const d=Math.hypot(dx,dy)||1; const diff=(d-rest)/d*0.5;
+    const ox=dx*diff, oy=dy*diff;
+    if(!na.pin&&na!==grabbed){ na.x+=ox; na.y+=oy; }
+    if(!nb.pin&&nb!==grabbed){ nb.x-=ox; nb.y-=oy; }
+  }
+  ctx.fillStyle='#070B1A'; ctx.fillRect(0,0,W,H);
+  ctx.lineWidth=1;
+  for(const [a,b] of links){
+    const na=nodes[a], nb=nodes[b];
+    const stretch=Math.min(1,Math.abs(Math.hypot(nb.x-na.x,nb.y-na.y)-cgap)/cgap);
+    ctx.strokeStyle=`hsla(${48-stretch*48}, ${60+stretch*30}%, ${62-stretch*10}%, ${0.25+stretch*0.6})`;
+    ctx.beginPath(); ctx.moveTo(na.x,na.y); ctx.lineTo(nb.x,nb.y); ctx.stroke();
+  }
+  for(const n of nodes){ if(n.pin){ ctx.fillStyle='var(--gold)'; ctx.fillStyle='#F5C84B'; ctx.beginPath(); ctx.arc(n.x,n.y,3,0,7); ctx.fill(); } }
+}
+
+// ---------- PENDULUM WAVE ----------
+let pends=[], pt=0;
+function initPend(){
+  pends=[]; const N=18, baseLen=Math.min(H*0.62, 520), top=H*0.16;
+  for(let i=0;i<N;i++){
+    const cycles = 24 - i*0.55;
+    pends.push({len: baseLen*(0.45+0.55*(i/N)), period: 1/cycles*60, phase:0, x:0, hue: 205 - (i/N)*200});
+  }
+}
+function stepPend(){
+  ctx.fillStyle='rgba(7,11,26,0.28)'; ctx.fillRect(0,0,W,H);
+  pt += 0.016;
+  const cx=W/2, top=H*0.14, spread=Math.min(W*0.8, 760), N=pends.length;
+  ctx.globalCompositeOperation='lighter';
+  pends.forEach((p,i)=>{
+    const ax = cx - spread/2 + (i/(N-1))*spread;
+    const ang = Math.sin(pt * (10 + i*0.42)) * 0.5;
+    const bx = ax + Math.sin(ang)*p.len, by = top + Math.cos(ang)*p.len;
+    ctx.strokeStyle=`hsla(${p.hue},70%,55%,0.25)`; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(ax,top); ctx.lineTo(bx,by); ctx.stroke();
+    const r=7;
+    const grd=ctx.createRadialGradient(bx,by,0,bx,by,r*2.4);
+    grd.addColorStop(0,`hsla(${p.hue},90%,68%,1)`); grd.addColorStop(1,`hsla(${p.hue},90%,55%,0)`);
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(bx,by,r*2.4,0,7); ctx.fill();
+    ctx.fillStyle=`hsl(${p.hue},90%,70%)`; ctx.beginPath(); ctx.arc(bx,by,r,0,7); ctx.fill();
+  });
+  ctx.globalCompositeOperation='source-over';
+}
+
+// ---------- MAGNET SWARM ----------
+let swarm=[];
+function initSwarm(){
+  swarm=Array.from({length: Math.min(420,(W*H)/2600)|0}, ()=>({
+    x:Math.random()*W, y:Math.random()*H, vx:0, vy:0, hue: Math.random()<0.5?48:205
+  }));
+  ctx.fillStyle='#070B1A'; ctx.fillRect(0,0,W,H);
+}
+function stepSwarm(){
+  ctx.fillStyle='rgba(7,11,26,0.16)'; ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='lighter';
+  const attract = mouse.down, mx=mouse.x, my=mouse.y, active=mx>0;
+  for(const p of swarm){
+    if(active){
+      const dx=mx-p.x, dy=my-p.y, d=Math.hypot(dx,dy)||1;
+      const f=(attract?1:-1) * Math.min(2.2, 900/(d*d) * 60);
+      p.vx+=dx/d*f; p.vy+=dy/d*f;
+    }
+    p.vx*=0.94; p.vy*=0.94;
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0||p.x>W) p.vx*=-0.7; if(p.y<0||p.y>H) p.vy*=-0.7;
+    p.x=Math.max(0,Math.min(W,p.x)); p.y=Math.max(0,Math.min(H,p.y));
+    const sp=Math.min(1,Math.hypot(p.vx,p.vy)/6);
+    ctx.fillStyle=`hsla(${p.hue+sp*60},90%,${55+sp*20}%,${0.4+sp*0.5})`;
+    ctx.beginPath(); ctx.arc(p.x,p.y,1.4+sp*2.4,0,7); ctx.fill();
+  }
+  ctx.globalCompositeOperation='source-over';
+}
+
+// ---------- EASING LAB ----------
+const eases = [
+  {name:'linear', fn:t=>t},
+  {name:'ease-in-out cubic', fn:t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2},
+  {name:'ease-out back', fn:t=>{const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2);}},
+  {name:'ease-out elastic', fn:t=>{const c4=2*Math.PI/3;return t===0?0:t===1?1:Math.pow(2,-10*t)*Math.sin((t*10-0.75)*c4)+1;}},
+  {name:'ease-out bounce', fn:t=>{const n1=7.5625,d1=2.75;if(t<1/d1)return n1*t*t;if(t<2/d1)return n1*(t-=1.5/d1)*t+.75;if(t<2.5/d1)return n1*(t-=2.25/d1)*t+.9375;return n1*(t-=2.625/d1)*t+.984375;}},
+  {name:'ease-in-out expo', fn:t=>t===0?0:t===1?1:t<.5?Math.pow(2,20*t-10)/2:(2-Math.pow(2,-20*t+10))/2},
+];
+let et=0;
+function drawEasing(){
+  ctx.fillStyle='#070B1A'; ctx.fillRect(0,0,W,H);
+  et += 0.006; const cycle=(et%1);
+  const cols = innerWidth<760?1:(innerWidth<1100?2:3);
+  const rows = Math.ceil(eases.length/cols);
+  const padX=Math.min(80,W*0.06), padY=130;
+  const cw=(W-padX*2)/cols, ch=(H-padY-70)/rows;
+  eases.forEach((e,i)=>{
+    const gx=i%cols, gy=Math.floor(i/cols);
+    const x0=padX+gx*cw+20, y0=padY+gy*ch+10, w=cw-90, h=ch-58;
+    // curve
+    ctx.strokeStyle='rgba(126,137,176,0.3)'; ctx.lineWidth=1;
+    ctx.strokeRect(x0,y0,w,h);
+    ctx.strokeStyle='#5B8CFF'; ctx.lineWidth=2; ctx.beginPath();
+    for(let s=0;s<=60;s++){ const t=s/60; const yy=y0+h-e.fn(t)*h; if(s===0)ctx.moveTo(x0,yy); else ctx.lineTo(x0+t*w,yy); }
+    ctx.stroke();
+    // moving point on curve
+    const ty=y0+h-e.fn(cycle)*h, tx=x0+cycle*w;
+    ctx.fillStyle='#F5C84B'; ctx.beginPath(); ctx.arc(tx,ty,4,0,7); ctx.fill();
+    // runner (the felt motion)
+    const ry=y0+h-e.fn(cycle)*h;
+    ctx.fillStyle='#F5C84B'; ctx.shadowColor='#F5C84B'; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.arc(x0+w+34, ry, 9, 0, 7); ctx.fill(); ctx.shadowBlur=0;
+    ctx.fillStyle='#7E89B0'; ctx.font="11px 'Space Grotesk', sans-serif";
+    ctx.fillText(e.name, x0, y0+h+22);
+  });
+}
+
+// ---------- loop ----------
+function initMode(){
+  ctx.setTransform(DPR,0,0,DPR,0,0); ctx.fillStyle='#070B1A'; ctx.fillRect(0,0,W,H);
+  if(mode==='cloth'){ initCloth(); hint.innerHTML='<b>Grab</b> the cloth and fling it · Verlet springs settle with real damping'; }
+  else if(mode==='pendulum'){ initPend(); hint.innerHTML='Different lengths drift in and out of phase — a <b>pendulum wave</b>'; }
+  else if(mode==='magnet'){ initSwarm(); hint.innerHTML='<b>Hold</b> to attract the swarm · release to scatter'; }
+  else { hint.innerHTML='Six easing curves, animating in lockstep — watch how each <b>feels</b> different'; }
+}
+function frame(){
+  if(!reduce){
+    if(mode==='cloth') stepCloth();
+    else if(mode==='pendulum') stepPend();
+    else if(mode==='magnet') stepSwarm();
+    else drawEasing();
+  } else { initMode(); }
+  requestAnimationFrame(frame);
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); mode=b.dataset.mode; initMode();
+}));
+resize(); frame();
+</script>
+</body>
+</html>

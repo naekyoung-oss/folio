@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generative Grids</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;500;700&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --space:#070B1A; --space-2:#0D1330; --star:#EAF0FF;
+    --gold:#F5C84B; --dim:#7E89B0; --line:rgba(126,137,176,.25);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:var(--space);color:var(--star);font-family:'Space Grotesk',sans-serif;overflow:hidden}
+  canvas#c{position:fixed;inset:0;z-index:0;display:block;cursor:crosshair}
+
+  .hud{position:fixed;z-index:2;left:0;right:0;top:0;padding:22px 24px;
+    display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px;
+    background:linear-gradient(180deg, rgba(7,11,26,.85), transparent);pointer-events:none}
+  .hud > *{pointer-events:auto}
+  .titles .eyebrow{font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+  .titles h1{font-family:'Unbounded',sans-serif;font-weight:700;font-size:clamp(20px,3vw,32px);line-height:1}
+  .titles p{color:var(--dim);font-size:12px;margin-top:6px;max-width:42ch;line-height:1.5}
+
+  .controls{margin-left:auto;display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+  .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  button{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:500;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--dim);background:rgba(13,19,48,.6);backdrop-filter:blur(8px);
+    border:1px solid var(--line);border-radius:999px;padding:8px 16px;cursor:pointer;transition:all .2s}
+  button:hover{color:var(--star);border-color:var(--dim)}
+  button.active{color:var(--space);background:var(--gold);border-color:var(--gold);box-shadow:0 0 22px rgba(245,200,75,.35)}
+  button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+
+  .hint{position:fixed;z-index:2;left:0;right:0;bottom:0;text-align:center;
+    color:var(--dim);font-size:11px;letter-spacing:.08em;padding:16px;
+    background:linear-gradient(0deg, rgba(7,11,26,.85), transparent);pointer-events:none}
+  .hint b{color:var(--gold);font-weight:500}
+  @media (max-width:680px){ .controls{margin-left:0;align-items:flex-start} .row{justify-content:flex-start} }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="hud">
+  <div class="titles">
+    <div class="eyebrow">Generative · Real-time</div>
+    <h1>Generative Grids</h1>
+    <p>Three living systems on one canvas — rhythm, noise and emergence. Move the cursor to push the field around.</p>
+  </div>
+  <div class="controls">
+    <div class="row" role="tablist" aria-label="System">
+      <button class="active" data-mode="flow">Flow Field</button>
+      <button data-mode="life">Life</button>
+      <button data-mode="mesh">Wave Mesh</button>
+    </div>
+    <div class="row">
+      <button id="btnRandom" title="New seed (R)">↻ Randomize</button>
+      <button id="btnSave" title="Save PNG (S)">⤓ Save PNG</button>
+      <button id="btnPause" title="Pause (Space)">⏸ Pause</button>
+    </div>
+  </div>
+</div>
+
+<div class="hint" id="hint"></div>
+
+<script>
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const hint = document.getElementById('hint');
+let W, H, DPR;
+let mode = 'flow';
+let paused = false;
+let seed = Date.now() % 100000;
+const mouse = { x: -9999, y: -9999, down: false, vx: 0, vy: 0, px: 0, py: 0 };
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// small deterministic PRNG
+function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+let rnd = mulberry(seed);
+
+function resize(){
+  DPR = Math.min(2, devicePixelRatio || 1);
+  W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  cv.style.width = W+'px'; cv.style.height = H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  initMode();
+}
+addEventListener('resize', resize);
+
+cv.addEventListener('pointermove', e=>{ mouse.x = e.clientX; mouse.y = e.clientY; });
+cv.addEventListener('pointerdown', e=>{ mouse.down = true; if(mode==='life') paintLife(e.clientX,e.clientY); });
+addEventListener('pointerup', ()=> mouse.down = false);
+cv.addEventListener('pointerleave', ()=>{ mouse.x = mouse.y = -9999; });
+
+// ---------- FLOW FIELD ----------
+let parts = [];
+const NUM = () => Math.round(Math.min(2600, (W*H)/650));
+function field(x,y,t){
+  return (Math.sin(x*0.0042 + t) + Math.sin(y*0.0052 - t*0.8) +
+          Math.sin((x+y)*0.0026 + t*0.5) + Math.cos((x-y)*0.0033 - t*0.3)) * 1.1;
+}
+function initFlow(){
+  parts = Array.from({length: NUM()}, ()=>({
+    x: rnd()*W, y: rnd()*H, px:0, py:0, h: rnd()*60, life: rnd()*200|0
+  }));
+  ctx.fillStyle = '#070B1A'; ctx.fillRect(0,0,W,H);
+}
+let ft = 0;
+function stepFlow(){
+  ft += 0.0016;
+  ctx.fillStyle = 'rgba(7,11,26,0.055)'; ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation = 'lighter';
+  for(const p of parts){
+    p.px = p.x; p.py = p.y;
+    const a = field(p.x, p.y, ft) * Math.PI;
+    let vx = Math.cos(a), vy = Math.sin(a);
+    const dx = p.x - mouse.x, dy = p.y - mouse.y;
+    const d2 = dx*dx + dy*dy;
+    if(d2 < 26000){ const f = (1 - d2/26000) * 2.4; const d = Math.sqrt(d2)||1; vx += dx/d*f; vy += dy/d*f; }
+    const sp = 1.7;
+    p.x += vx*sp; p.y += vy*sp;
+    p.life--;
+    if(p.x<0||p.x>W||p.y<0||p.y>H||p.life<0){ p.x=rnd()*W; p.y=rnd()*H; p.life=120+rnd()*180|0; continue; }
+    const hue = (p.h + ft*900 + 38) % 360;
+    ctx.strokeStyle = `hsla(${hue<40||hue>300?48:205 + Math.sin(ft*2)*30}, 85%, 65%, 0.5)`;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.moveTo(p.px,p.py); ctx.lineTo(p.x,p.y); ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// ---------- GAME OF LIFE ----------
+let cols, rows, cell, grid, age, lifeTick=0;
+function initLife(){
+  cell = Math.max(10, Math.round(Math.min(W,H)/46));
+  cols = Math.ceil(W/cell); rows = Math.ceil(H/cell);
+  grid = new Uint8Array(cols*rows);
+  age = new Float32Array(cols*rows);
+  for(let i=0;i<grid.length;i++){ grid[i] = rnd()<0.18?1:0; }
+}
+function paintLife(px,py){
+  const cx = Math.floor(px/cell), cy = Math.floor(py/cell);
+  for(let y=-1;y<=1;y++) for(let x=-1;x<=1;x++){
+    const nx=cx+x, ny=cy+y;
+    if(nx>=0&&nx<cols&&ny>=0&&ny<rows){ grid[ny*cols+nx]=1; age[ny*cols+nx]=1; }
+  }
+}
+function stepLifeLogic(){
+  const next = new Uint8Array(grid.length);
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+    let n=0;
+    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+      if(!dx&&!dy) continue;
+      const nx=(x+dx+cols)%cols, ny=(y+dy+rows)%rows;
+      n += grid[ny*cols+nx];
+    }
+    const i=y*cols+x, alive=grid[i];
+    next[i] = (alive && (n===2||n===3)) || (!alive && n===3) ? 1 : 0;
+  }
+  grid = next;
+}
+function drawLife(){
+  ctx.fillStyle = '#070B1A'; ctx.fillRect(0,0,W,H);
+  if(mouse.down && mouse.x>0) paintLife(mouse.x, mouse.y);
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+    const i=y*cols+x;
+    if(grid[i]){ age[i]=Math.min(1, age[i]+0.12); } else { age[i]=Math.max(0, age[i]-0.05); }
+    const a = age[i];
+    if(a<=0.01) continue;
+    const cxp=x*cell, cyp=y*cell, pad=cell*0.16, s=cell-pad*2;
+    const hue = 40 + (1-a)*170;
+    ctx.fillStyle = `hsla(${hue},90%,${55+a*10}%,${a*0.92})`;
+    ctx.shadowColor = `hsla(${hue},90%,60%,${a})`; ctx.shadowBlur = a*14;
+    roundRect(cxp+pad, cyp+pad, s, s, Math.min(6,s*0.3)); ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+}
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+// ---------- WAVE MESH ----------
+let mcols, mrows, mgap, mt=0;
+const ripples = [];
+function initMesh(){
+  mgap = Math.max(26, Math.round(Math.min(W,H)/22));
+  mcols = Math.ceil(W/mgap)+2; mrows = Math.ceil(H/mgap)+2;
+  ripples.length = 0;
+}
+cv.addEventListener('pointerdown', e=>{ if(mode==='mesh') ripples.push({x:e.clientX,y:e.clientY,t:0}); });
+function drawMesh(){
+  ctx.fillStyle = '#070B1A'; ctx.fillRect(0,0,W,H);
+  mt += 0.03;
+  for(let i=ripples.length-1;i>=0;i--){ ripples[i].t+=0.04; if(ripples[i].t>6) ripples.splice(i,1); }
+  const z = (x,y)=>{
+    let v = Math.sin(x*0.018 + mt) * 10 + Math.sin(y*0.02 - mt*0.8) * 10 + Math.sin((x+y)*0.012 + mt*0.5)*8;
+    const dxm = x-mouse.x, dym = y-mouse.y, dm = Math.sqrt(dxm*dxm+dym*dym);
+    if(dm<260) v += Math.cos(dm*0.05 - mt*3) * (1-dm/260) * 26;
+    for(const r of ripples){ const d=Math.hypot(x-r.x,y-r.y); const front=r.t*120; if(Math.abs(d-front)<70) v += Math.cos((d-front)*0.08) * (1-r.t/6) * 34; }
+    return v;
+  };
+  for(let gy=0; gy<mrows; gy++){
+    ctx.beginPath();
+    for(let gx=0; gx<mcols; gx++){
+      const x=gx*mgap, y=gy*mgap, dz=z(x,y);
+      const py=y+dz;
+      if(gx===0) ctx.moveTo(x,py); else ctx.lineTo(x,py);
+    }
+    const t = gy/mrows;
+    ctx.strokeStyle = `hsla(${205 - t*150}, 80%, 62%, ${0.18+0.5*(1-t)})`;
+    ctx.lineWidth = 1; ctx.stroke();
+  }
+  // glowing nodes on peaks
+  ctx.globalCompositeOperation = 'lighter';
+  for(let gy=0; gy<mrows; gy+=2) for(let gx=0; gx<mcols; gx+=2){
+    const x=gx*mgap, y=gy*mgap, dz=z(x,y);
+    if(dz>14){ const b=(dz-14)/30; ctx.fillStyle=`hsla(48,95%,65%,${Math.min(.9,b)})`;
+      ctx.beginPath(); ctx.arc(x,y+dz,1.6+b*2,0,7); ctx.fill(); }
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// ---------- loop ----------
+function initMode(){
+  rnd = mulberry(seed);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle = '#070B1A'; ctx.fillRect(0,0,W,H);
+  if(mode==='flow') initFlow();
+  else if(mode==='life') initLife();
+  else initMesh();
+  hint.innerHTML = mode==='flow' ? 'Cursor pushes the swarm · <b>R</b> reseed · <b>S</b> save · <b>Space</b> pause'
+    : mode==='life' ? 'Click & drag to seed cells · Conway’s Game of Life, evolving live · <b>R</b> reset'
+    : 'Click to drop ripples · cursor warps the mesh · <b>R</b> reseed';
+}
+function frame(){
+  if(!paused && !reduce){
+    if(mode==='flow') stepFlow();
+    else if(mode==='life'){ if(++lifeTick%6===0) stepLifeLogic(); drawLife(); }
+    else drawMesh();
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---------- controls ----------
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); mode = b.dataset.mode; initMode();
+}));
+document.getElementById('btnRandom').addEventListener('click', ()=>{ seed = Date.now()%100000; initMode(); });
+document.getElementById('btnSave').addEventListener('click', ()=>{
+  const a=document.createElement('a'); a.download=`generative-grid-${mode}-${seed}.png`; a.href=cv.toDataURL('image/png'); a.click();
+});
+const pauseBtn = document.getElementById('btnPause');
+pauseBtn.addEventListener('click', ()=>{ paused=!paused; pauseBtn.textContent = paused?'▶ Play':'⏸ Pause'; pauseBtn.classList.toggle('active',paused); });
+addEventListener('keydown', e=>{
+  if(e.key==='r'||e.key==='R'){ seed=Date.now()%100000; initMode(); }
+  else if(e.key==='s'||e.key==='S'){ document.getElementById('btnSave').click(); }
+  else if(e.key===' '){ e.preventDefault(); pauseBtn.click(); }
+});
+
+resize();
+frame();
+</script>
+</body>
+</html>
