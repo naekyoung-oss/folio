@@ -403,6 +403,22 @@ const marks = {
       </g>
       <text x="60" y="360" font-family="JetBrains Mono, monospace" font-size="10" fill="${colors.a}" letter-spacing="3">CUBE · NAV</text>
     </svg>`,
+  exp_wealth: (colors) => `
+    <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
+      <rect width="500" height="400" fill="${colors.bg}"/>
+      ${Array.from({length:48}).map((_,i)=>{
+        const x = (i*97)%480 + 10, y = (i*61)%380 + 10, r = (i%5===0)?1.8:0.9;
+        return `<circle cx="${x}" cy="${y}" r="${r}" fill="${colors.a}" opacity="${(i%5===0)?0.8:0.4}"/>`;
+      }).join('')}
+      <g transform="translate(250 200)">
+        <ellipse rx="140" ry="52" fill="none" stroke="${colors.a}" stroke-width="1" opacity="0.4"/>
+        <ellipse rx="100" ry="36" fill="none" stroke="${colors.b}" stroke-width="1" opacity="0.45" transform="rotate(20)"/>
+        <circle r="26" fill="${colors.accent}"/>
+        <circle cx="140" cy="0" r="5" fill="${colors.b}"/>
+        <circle cx="-86" cy="-31" r="3.5" fill="${colors.a}"/>
+      </g>
+      <text x="60" y="360" font-family="JetBrains Mono, monospace" font-size="10" fill="${colors.a}" letter-spacing="3">WEALTH · COSMOS</text>
+    </svg>`,
   exp_typeplay: (colors) => `
     <svg class="mark-svg" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid slice">
       <rect width="500" height="400" fill="${colors.bg}"/>
@@ -588,7 +604,7 @@ function renderGrid() {
   const colors = currentColors();
   const root = document.querySelector('.grid-work');
   root.innerHTML = WORK.map(w => `
-    <a href="#" class="card" aria-label="${w.title}">
+    <a href="${w.url || '#'}" class="card" aria-label="${w.title}"${w.url && /^https?:/.test(w.url) ? ' target="_blank" rel="noopener noreferrer"' : ''}>
       <div class="thumb">${marks[w.key](colors)}</div>
       <div class="meta">
         <span class="title">${w.title}</span>
@@ -600,7 +616,8 @@ function renderGrid() {
 }
 
 const EXPERIMENTS = [
-  {key:'exp_cube', title:'Cube Navigation', em:'', company:'Weekend · 2026', desc:'A spatial navigation prototype — rotating cube faces as a menu.', url:'experiments/experiments/cube-navigation/'},
+  {key:'exp_cube', title:'Cube Navigation', em:'', company:'Weekend · 2026', desc:'A spatial navigation prototype — rotating cube faces as a menu.', url:'/folio/experiments/cube-navigation/'},
+  {key:'exp_wealth', title:'The Wealth Cosmos', em:'', company:'Weekend · 2026', desc:'An interactive data-viz concept — Forbes 2026 wealth mapped as an orbiting cosmos.', url:'/folio/experiments/wealth-cosmos/'},
   {key:'exp_typeplay', title:'Type Studies', em:'', company:'Ongoing · 2024—', desc:'Pairings, spacing tests, and italic explorations — notes from daily typesetting.'},
   {key:'exp_grid', title:'Generative Grids', em:'', company:'Weekend · 2024', desc:'Small SVG sketches exploring rhythm, noise, and modular composition.'},
   {key:'exp_motion', title:'Motion Studies', em:'', company:'Weekend · 2023', desc:'Micro-interactions and easing curves — quiet motion for dense interfaces.'},
@@ -668,24 +685,21 @@ document.querySelectorAll('.featured, .grid-work .card, .note-band, footer').for
   observer.observe(el);
 });
 
-/* ---------- Cube Navigation Modal ---------- */
-const cubeModal = document.createElement('div');
-cubeModal.id = 'cubeModal';
-cubeModal.style.cssText = `
+/* ---------- Page overlay modal (Work + Experiments) ---------- */
+const pageModal = document.createElement('div');
+pageModal.id = 'pageModal';
+pageModal.style.cssText = `
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: rgba(0, 0, 0, 0.92);
   display: none;
   align-items: center;
   justify-content: center;
   z-index: 9999;
 `;
-cubeModal.innerHTML = `
+pageModal.innerHTML = `
   <div style="position: relative; width: 95vw; height: 95vh; background: #000; border-radius: 2px; overflow: hidden;">
-    <button id="closeCubeModal" style="
+    <button id="closePageModal" style="
       position: absolute;
       top: 20px;
       right: 20px;
@@ -701,38 +715,41 @@ cubeModal.innerHTML = `
       cursor: pointer;
     ">Close</button>
     <iframe
-      src="experiments/experiments/cube-navigation/"
+      id="pageModalFrame"
+      src=""
       style="width: 100%; height: 100%; border: none; background: #000; overflow: hidden;"
       scrolling="no"
     ></iframe>
   </div>
 `;
-document.body.appendChild(cubeModal);
+document.body.appendChild(pageModal);
 
-document.getElementById('closeCubeModal').addEventListener('click', () => {
-  cubeModal.style.display = 'none';
+const pageModalFrame = document.getElementById('pageModalFrame');
+function openPageModal(url) {
+  pageModalFrame.src = url;
+  pageModal.style.display = 'flex';
+}
+function closePageModal() {
+  pageModal.style.display = 'none';
+  pageModalFrame.src = '';   // unload the page so iframe animations/audio stop
+}
+
+document.getElementById('closePageModal').addEventListener('click', closePageModal);
+pageModal.addEventListener('click', (e) => { if (e.target === pageModal) closePageModal(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && pageModal.style.display === 'flex') closePageModal();
 });
 
-cubeModal.addEventListener('click', (e) => {
-  if (e.target === cubeModal) {
-    cubeModal.style.display = 'none';
-  }
-});
-
-/* Add click handler to Cube Navigation card */
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    const experimentsGrid = document.getElementById('experimentsGrid');
-    if (experimentsGrid) {
-      const cubeCard = Array.from(experimentsGrid.querySelectorAll('a')).find(a => a.getAttribute('aria-label') === 'Cube Navigation');
-      if (cubeCard) {
-        cubeCard.addEventListener('click', (e) => {
-          e.preventDefault();
-          cubeModal.style.display = 'flex';
-        });
-      }
-    }
-  }, 100);
+/* Delegated: any Work/Experiment card with an internal url opens in the overlay.
+   External (http/https) links keep their default new-tab behaviour. */
+document.addEventListener('click', (e) => {
+  const card = e.target.closest('.grid-work .card');
+  if (!card) return;
+  const href = card.getAttribute('href');
+  if (!href || href === '#') return;
+  if (/^https?:/i.test(href)) return;
+  e.preventDefault();
+  openPageModal(href);
 });
 </script>
 </body>

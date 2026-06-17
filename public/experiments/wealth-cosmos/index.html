@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Wealth Cosmos — Forbes 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;500;700&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --space:#070B1A;
+    --space-2:#0D1330;
+    --star:#EAF0FF;
+    --gold:#F5C84B;
+    --dim:#7E89B0;
+    --line:rgba(126,137,176,.25);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:var(--space);
+    color:var(--star);
+    font-family:'Space Grotesk',sans-serif;
+    overflow-x:hidden;
+  }
+  canvas#stars{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 0%, var(--space-2) 0%, var(--space) 60%);
+  }
+
+  header{position:relative;z-index:2;text-align:center;padding:42px 20px 10px}
+  .eyebrow{font-size:11px;letter-spacing:.35em;text-transform:uppercase;color:var(--gold);margin-bottom:14px}
+  h1{font-family:'Unbounded',sans-serif;font-weight:700;font-size:clamp(26px,5vw,52px);line-height:1.1;letter-spacing:.01em}
+  h1 span{color:var(--gold)}
+  .sub{color:var(--dim);font-size:14px;margin-top:12px;max-width:560px;margin-left:auto;margin-right:auto;line-height:1.5}
+
+  .controls{position:relative;z-index:2;display:flex;justify-content:center;gap:10px;margin:22px 0 6px}
+  .controls button{
+    font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:500;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
+    background:transparent;border:1px solid var(--line);border-radius:999px;
+    padding:9px 22px;cursor:pointer;transition:all .25s;
+  }
+  .controls button:hover{color:var(--star);border-color:var(--dim)}
+  .controls button.active{color:var(--space);background:var(--gold);border-color:var(--gold);box-shadow:0 0 24px rgba(245,200,75,.35)}
+  .controls button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+
+  #cosmos{position:relative;z-index:1;width:100%;min-height:70vh}
+  canvas#orbits{position:absolute;inset:0;pointer-events:none;opacity:.9}
+
+  .body{
+    position:absolute;background:transparent;
+    border:none;cursor:pointer;border-radius:50%;
+  }
+  .body.gliding{
+    transition:left 1s cubic-bezier(.5,0,.2,1), top 1s cubic-bezier(.5,0,.2,1),
+               width 1s cubic-bezier(.5,0,.2,1), height 1s cubic-bezier(.5,0,.2,1);
+  }
+  .surface{
+    position:absolute;inset:0;border-radius:50%;
+    animation:spin 26s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .body:hover .surface,.body:focus-visible .surface{filter:brightness(1.25)}
+  .body:hover,.body:focus-visible{z-index:5}
+  .body:focus-visible{outline:2px solid var(--star);outline-offset:4px}
+  .body .lbl{
+    position:absolute;left:50%;top:100%;transform:translateX(-50%);
+    margin-top:6px;white-space:nowrap;
+    font-size:11px;letter-spacing:.06em;color:var(--dim);pointer-events:none;
+  }
+  .body .lbl b{display:block;color:var(--star);font-weight:500;font-size:12px}
+  .body:hover .lbl,.body:focus-visible .lbl{display:block !important}
+
+  @media (prefers-reduced-motion: reduce){
+    .surface{animation:none}
+    *{transition-duration:.01ms !important}
+  }
+
+  #panel{
+    position:fixed;z-index:10;right:0;top:0;height:100%;
+    width:min(360px,92vw);
+    background:rgba(10,15,38,.92);backdrop-filter:blur(14px);
+    border-left:1px solid var(--line);padding:30px 28px;
+    transform:translateX(105%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+    display:flex;flex-direction:column;gap:6px;
+  }
+  #panel.open{transform:translateX(0)}
+  #panel .close{align-self:flex-end;background:none;border:1px solid var(--line);color:var(--dim);border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;line-height:1}
+  #panel .close:hover{color:var(--star)}
+  #panel .rank{font-family:'Unbounded',sans-serif;font-weight:300;font-size:13px;color:var(--gold);letter-spacing:.2em;margin-top:8px}
+  #panel h2{font-family:'Unbounded',sans-serif;font-weight:500;font-size:24px;line-height:1.2;margin:6px 0 2px}
+  #panel .worth{font-family:'Unbounded',sans-serif;font-weight:700;font-size:38px;color:var(--gold);margin:10px 0 2px}
+  #panel .worth small{font-size:14px;font-weight:300;color:var(--dim)}
+  #panel .src{color:var(--dim);font-size:14px;margin-bottom:18px}
+  #panel .fact{border-top:1px solid var(--line);padding-top:16px;font-size:14px;line-height:1.6;color:var(--star)}
+  #panel .fact .k{color:var(--dim);font-size:11px;letter-spacing:.2em;text-transform:uppercase;display:block;margin-bottom:6px}
+  #panel .orbview{width:90px;height:90px;border-radius:50%;margin:14px 0 4px}
+
+  footer{position:relative;z-index:2;text-align:center;color:var(--dim);font-size:12px;padding:30px 20px 40px;line-height:1.7}
+  .findme{
+    position:relative;z-index:2;max-width:560px;margin:10px auto 0;
+    padding:28px 24px;border-top:1px solid var(--line);text-align:center;
+  }
+  .findme-title{font-family:'Unbounded',sans-serif;font-weight:500;font-size:20px;margin-bottom:8px}
+  .findme-sub{color:var(--dim);font-size:13px;line-height:1.5;margin-bottom:18px}
+  .findme-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .findme-row input{
+    font-family:'Space Grotesk',sans-serif;font-size:14px;color:var(--star);
+    background:rgba(13,19,48,.7);border:1px solid var(--line);border-radius:999px;
+    padding:10px 18px;width:min(240px,60vw);outline:none;
+  }
+  .findme-row input:focus-visible{border-color:var(--gold)}
+  .findme-row input::placeholder{color:var(--dim)}
+  .findme-row button{
+    font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:500;
+    letter-spacing:.08em;text-transform:uppercase;
+    color:var(--space);background:var(--gold);border:1px solid var(--gold);
+    border-radius:999px;padding:10px 22px;cursor:pointer;
+    box-shadow:0 0 24px rgba(245,200,75,.25);transition:filter .2s;
+  }
+  .findme-row button:hover{filter:brightness(1.1)}
+  .findme-row button:focus-visible{outline:2px solid var(--star);outline-offset:3px}
+  .findme-result{margin-top:22px;font-size:14px;line-height:1.7}
+  .findme-result b{color:var(--gold);font-weight:500}
+  .findme-err{color:var(--dim)}
+  .findme-dot{
+    display:block;margin:0 auto 12px;border-radius:50%;
+    background:radial-gradient(circle at 32% 30%, #FFE9A8 0%, #F5C84B 50%, #4a3c12 100%);
+    box-shadow:0 0 14px rgba(245,200,75,.5);
+  }
+  .findme-big{
+    display:block;font-family:'Unbounded',sans-serif;font-weight:700;
+    font-size:clamp(17px,3.4vw,24px);color:var(--star);margin:12px 0;
+  }
+  .legendnote{position:relative;z-index:2;text-align:center;color:var(--dim);font-size:12px;letter-spacing:.05em;padding:4px 20px 0}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+
+<header>
+  <div class="eyebrow">Forbes Real-Time Billionaires · June 2026</div>
+  <h1>The Wealth <span>Cosmos</span></h1>
+  <p class="sub">Every body's size is true to scale: its area equals its owner's net worth. Musk is the sun; everyone else orbits him. Tap a body to learn who it is, then switch to Lineup and find Beyoncé.</p>
+</header>
+
+<div class="controls" role="tablist" aria-label="View mode">
+  <button id="btnCosmos" class="active" onclick="setView('cosmos')">Cosmos</button>
+  <button id="btnLineup" onclick="setView('lineup')">Lineup</button>
+</div>
+<div class="legendnote" id="note">A solar system of money · everything orbits Musk</div>
+
+<div id="cosmos" aria-live="polite"><canvas id="orbits"></canvas></div>
+
+<aside id="panel" aria-hidden="true">
+  <button class="close" onclick="closePanel()" aria-label="Close details">×</button>
+  <div class="rank" id="pRank"></div>
+  <h2 id="pName"></h2>
+  <div class="orbview" id="pOrb"></div>
+  <div class="worth" id="pWorth"></div>
+  <div class="src" id="pSrc"></div>
+  <div class="fact"><span class="k">Sense of scale</span><span id="pFact"></span></div>
+</aside>
+
+<section class="findme">
+  <h2 class="findme-title">Find yourself</h2>
+  <p class="findme-sub">Enter any net worth and we'll draw it at the same scale as the cosmos above.</p>
+  <div class="findme-row">
+    <input id="fmInput" type="text" inputmode="decimal" placeholder="e.g. 250k, 1.2m, 80000" aria-label="Your net worth in US dollars">
+    <button onclick="findMe()">Place me</button>
+  </div>
+  <div class="findme-result" id="fmResult" aria-live="polite"></div>
+</section>
+
+<footer>
+  Figures from Forbes' Real-Time Billionaires index, June 2026; Musk reflects this week's SpaceX IPO (Reuters/Forbes estimates). Entries outside the top 50 use the March 2026 annual list.<br>
+  Circle <em>areas</em> are proportional to wealth — the honest way to compare circles.
+</footer>
+
+<script>
+const PEOPLE = [
+  {rank:1,    name:"Elon Musk",       worth:1100, src:"SpaceX · Tesla · xAI",    hue:"#F5C84B", glow:"#FFE9A8"},
+  {rank:2,    name:"Larry Page",      worth:314,  src:"Google",                  hue:"#5B8CFF", glow:"#A8C4FF"},
+  {rank:3,    name:"Sergey Brin",     worth:290,  src:"Google",                  hue:"#4E7DE8", glow:"#9FBCFF"},
+  {rank:4,    name:"Jeff Bezos",      worth:275,  src:"Amazon",                  hue:"#FF9D4D", glow:"#FFD0A3"},
+  {rank:5,    name:"Larry Ellison",   worth:217,  src:"Oracle",                  hue:"#C04C4C", glow:"#F0A8A8"},
+  {rank:6,    name:"Mark Zuckerberg", worth:209,  src:"Meta",                    hue:"#41C9E2", glow:"#A5ECF7"},
+  {rank:7,    name:"Michael Dell",    worth:178,  src:"Dell Technologies",       hue:"#8FA8D8", glow:"#CDD9F0"},
+  {rank:8,    name:"Jensen Huang",    worth:172,  src:"Nvidia (chips)",          hue:"#76D672", glow:"#C2F2C0"},
+  {rank:9,    name:"Rob Walton",      worth:149,  src:"Walmart",                 hue:"#4FA3C8", glow:"#AEDCEE"},
+  {rank:11,   name:"Bernard Arnault", worth:143,  src:"LVMH (luxury)",           hue:"#D98BC0", glow:"#F4C9E6"},
+  {rank:12,   name:"Warren Buffett",  worth:140,  src:"Berkshire Hathaway",      hue:"#C9A86A", glow:"#EBD8B4"},
+  {rank:13,   name:"Alice Walton",    worth:137,  src:"Walmart",                 hue:"#5FB7D4", glow:"#B6E5F2"},
+  {rank:14,   name:"Amancio Ortega",  worth:134,  src:"Zara (fashion retail)",   hue:"#6FC7B5", glow:"#BFEDE2"},
+  {rank:19,   name:"Bill Gates",      worth:103,  src:"Microsoft",               hue:"#8E7BE5", glow:"#CCC2F5"},
+  {rank:27,   name:"Zhang Yiming",    worth:69,   src:"ByteDance / TikTok",      hue:"#48D6C0", glow:"#ADEFE3"},
+  {rank:84,   name:"MacKenzie Scott", worth:28.6, src:"Amazon (philanthropist)", hue:"#E58FA1", glow:"#F6C9D3"},
+  {rank:645,  name:"Donald Trump",    worth:6.5,  src:"Real estate",             hue:"#A6A6B8", glow:"#D8D8E2"},
+  {rank:2052, name:"Taylor Swift",    worth:2,    src:"Music",                   hue:"#F2A0CE", glow:"#FAD2E8"},
+  {rank:3332, name:"Beyoncé",         worth:1,    src:"Music",                   hue:"#E6C2F2", glow:"#F3E0FA"},
+];
+
+// Rings of the solar system: which PEOPLE indices share an orbit
+const RINGS = [
+  [1,2],             // Page, Brin
+  [3,4,5],           // Bezos, Ellison, Zuckerberg
+  [6,7,8,9],         // Dell, Huang, Rob Walton, Arnault
+  [10,11,12,13],     // Buffett, Alice Walton, Ortega, Gates
+  [14,15,16,17,18],  // Zhang, Scott, Trump, Swift, Beyoncé
+];
+const SQUASH = 0.62;          // elliptical tilt of the orbital plane
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const stage  = document.getElementById('cosmos');
+const orbCv  = document.getElementById('orbits');
+const orbCtx = orbCv.getContext('2d');
+let view = 'cosmos';
+let SCALE = 3.5;
+let rafId = null;
+
+function radius(p){ return Math.max(3, Math.sqrt(p.worth) * SCALE); }
+function fmtWorth(w){ return w >= 1000 ? '$' + (w/1000).toFixed(1).replace(/\.0$/,'') + 'T' : '$' + w + 'B'; }
+function orbStyle(p){
+  return `radial-gradient(circle at 32% 30%, ${p.glow} 0%, ${p.hue} 42%, ${shade(p.hue)} 100%)`;
+}
+function shade(hex){
+  const n = parseInt(hex.slice(1),16);
+  return `rgb(${(n>>16)*0.35|0},${((n>>8)&255)*0.35|0},${(n&255)*0.35|0})`;
+}
+
+// ---------- build orbs ----------
+const orbs = PEOPLE.map((p,i)=>{
+  const el = document.createElement('button');
+  el.className = 'body';
+  el.setAttribute('aria-label', `${p.name}, ${fmtWorth(p.worth)}`);
+  const surf = document.createElement('span');
+  surf.className = 'surface';
+  surf.style.background = orbStyle(p);
+  surf.style.boxShadow = `0 0 ${Math.min(60, 20+p.worth/15)}px ${p.hue}55`;
+  surf.style.animationDuration = (18 + i*2.5) + 's';
+  el.appendChild(surf);
+  const lbl = document.createElement('span');
+  lbl.className = 'lbl';
+  lbl.innerHTML = `<b>${p.name}</b>${fmtWorth(p.worth)}`;
+  el.appendChild(lbl);
+  el.addEventListener('click', ()=>openPanel(p));
+  stage.appendChild(el);
+  return el;
+});
+
+// ---------- orbital mechanics ----------
+let system = null; // {cx, cy, rings:[{R, members:[{idx, angle, r}], speed}]}
+
+function buildSystem(){
+  const W = stage.clientWidth, isMobile = W < 640;
+  SCALE = isMobile ? 3.0 : 3.5;
+
+  // ring radii: each ring clears the previous by the largest bodies involved
+  const rings = [];
+  let prevEdge = radius(PEOPLE[0]);              // sun's surface
+  RINGS.forEach((members, ri)=>{
+    const maxR = Math.max(...members.map(i=>radius(PEOPLE[i])));
+    const R = prevEdge + maxR + (isMobile ? 18 : 26);
+    prevEdge = R + maxR;
+    rings.push({
+      R, members: members.map((idx,k)=>({
+        idx,
+        angle: (k / members.length) * Math.PI*2 + ri*0.9,
+      })),
+      speed: (ri % 2 ? -1 : 1) * 0.32 / Math.sqrt(R/120)   // inner = faster, alternating direction
+    });
+  });
+
+  // fit the whole system into the viewport width
+  const Rmax = rings[rings.length-1].R + 30;
+  const fit = Math.min(1, (W/2 - 16) / Rmax);
+  SCALE *= fit;
+  if(fit < 1){
+    let prev = radius(PEOPLE[0]);
+    rings.forEach((ring,ri)=>{
+      const maxR = Math.max(...RINGS[ri].map(i=>radius(PEOPLE[i])));
+      ring.R = prev + maxR + (isMobile ? 14 : 26)*fit;
+      prev = ring.R + maxR;
+    });
+  }
+
+  const Rout = rings[rings.length-1].R;
+  const cy = Rout*SQUASH + radius(PEOPLE[0]) + 80;
+  const H  = cy + Rout*SQUASH + Math.max(...RINGS[4].map(i=>radius(PEOPLE[i]))) + 120;
+  stage.style.minHeight = H + 'px';
+  system = { cx: W/2, cy, rings, H };
+}
+
+function drawOrbitPaths(){
+  orbCv.width = stage.clientWidth;
+  orbCv.height = system.H;
+  orbCtx.clearRect(0,0,orbCv.width,orbCv.height);
+  if(view !== 'cosmos') return;
+  orbCtx.strokeStyle = 'rgba(126,137,176,.18)';
+  orbCtx.lineWidth = 1;
+  system.rings.forEach(ring=>{
+    orbCtx.beginPath();
+    orbCtx.ellipse(system.cx, system.cy, ring.R, ring.R*SQUASH, 0, 0, Math.PI*2);
+    orbCtx.stroke();
+  });
+}
+
+function placeSun(){
+  const r = radius(PEOPLE[0]);
+  const el = orbs[0];
+  el.style.width = el.style.height = r*2+'px';
+  el.style.left = (system.cx - r)+'px';
+  el.style.top  = (system.cy - r)+'px';
+  el.querySelector('.lbl').style.display = 'block';
+}
+
+function positionOrbiters(){
+  system.rings.forEach(ring=>{
+    ring.members.forEach(m=>{
+      const p = PEOPLE[m.idx], r = radius(p);
+      const x = system.cx + Math.cos(m.angle)*ring.R;
+      const y = system.cy + Math.sin(m.angle)*ring.R*SQUASH;
+      const el = orbs[m.idx];
+      el.style.width = el.style.height = r*2+'px';
+      el.style.left = (x-r)+'px';
+      el.style.top  = (y-r)+'px';
+      // bodies in front of the sun (lower half of ellipse) render on top
+      el.style.zIndex = Math.sin(m.angle) > 0 ? 3 : 1;
+      el.querySelector('.lbl').style.display = r > 14 ? 'block' : 'none';
+    });
+  });
+  orbs[0].style.zIndex = 2;
+}
+
+let lastT = null;
+let hovering = false;     // true while the cursor is on a body
+let speedFactor = 1;      // 1 = full orbit speed, 0 = held still
+stage.addEventListener('pointerover', e=>{ if(e.target.closest('.body')) hovering = true; });
+stage.addEventListener('pointerout',  e=>{ if(e.target.closest('.body')) hovering = false; });
+stage.addEventListener('pointerleave', ()=>{ hovering = false; });
+
+function tick(t){
+  if(lastT !== null){
+    const dt = Math.min(0.05, (t - lastT)/1000);
+    // Binary rule: hovering any orb → stop. Not hovering → spin.
+    // Brake faster than we accelerate, and snap to a true 0 while
+    // hovering so the click target cannot move at all.
+    const target = hovering ? 0 : 1;
+    const rate = target < speedFactor ? 14 : 5;
+    speedFactor += (target - speedFactor) * Math.min(1, dt * rate);
+    if(speedFactor < 0.02 && hovering) speedFactor = 0;
+    if(speedFactor > 0){
+      system.rings.forEach(ring=>{
+        ring.members.forEach(m=>{ m.angle += ring.speed * dt * speedFactor; });
+      });
+      positionOrbiters();
+    }
+  }
+  lastT = t;
+  rafId = requestAnimationFrame(tick);
+}
+
+function startCosmos(){
+  buildSystem();
+  drawOrbitPaths();
+  orbs.forEach(el=>el.classList.remove('gliding'));
+  placeSun();
+  positionOrbiters();
+  if(!reduceMotion){
+    lastT = null;
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(tick);
+  }
+}
+function stopCosmos(){
+  cancelAnimationFrame(rafId);
+  rafId = null;
+}
+
+// ---------- lineup layout: sorted row, wraps on small screens ----------
+function layoutLineup(){
+  stopCosmos();
+  orbCtx.clearRect(0,0,orbCv.width,orbCv.height);
+  orbs.forEach(el=>{ el.classList.add('gliding'); el.style.zIndex = 1; });
+  const W = stage.clientWidth, isMobile = W < 640;
+  SCALE = isMobile ? 2.6 : 4.2;
+  const gap = isMobile ? 18 : 26;
+  const pad = isMobile ? 14 : 40;
+  let x = pad, rowY = isMobile ? 220 : 300, rowMax = 0;
+  PEOPLE.forEach((p,i)=>{
+    const r = radius(p);
+    if(x + r*2 > W - pad){ x = pad; rowY += rowMax*2 + 96; rowMax = 0; }
+    rowMax = Math.max(rowMax, r);
+    const el = orbs[i];
+    el.style.width = el.style.height = r*2+'px';
+    el.style.left = x+'px';
+    el.style.top  = (rowY - r)+'px';
+    el.querySelector('.lbl').style.display = 'block';
+    x += r*2 + gap;
+  });
+  stage.style.minHeight = (rowY + rowMax + 140) + 'px';
+}
+
+function setView(v){
+  view = v;
+  document.getElementById('btnCosmos').classList.toggle('active', v==='cosmos');
+  document.getElementById('btnLineup').classList.toggle('active', v==='lineup');
+  document.getElementById('note').textContent =
+    v==='cosmos' ? 'A solar system of money · everything orbits Musk'
+                 : 'Sorted richest → "poorest" · same scale for everyone';
+  v==='cosmos' ? startCosmos() : layoutLineup();
+}
+
+// ---------- detail panel ----------
+const panel = document.getElementById('panel');
+function openPanel(p){
+  document.getElementById('pRank').textContent = `RANK ${p.rank.toLocaleString()} / 3,400+`;
+  document.getElementById('pName').textContent = p.name;
+  document.getElementById('pWorth').innerHTML = p.worth >= 1000
+    ? `$${(p.worth/1000).toFixed(1)}<small> trillion</small>`
+    : `$${p.worth}<small> billion</small>`;
+  document.getElementById('pSrc').textContent = p.src;
+  const orb = document.getElementById('pOrb');
+  orb.style.background = orbStyle(p);
+  orb.style.boxShadow = `0 0 40px ${p.hue}66`;
+  document.getElementById('pFact').textContent = factClean(p);
+  panel.classList.add('open');
+  panel.setAttribute('aria-hidden','false');
+}
+function factClean(p){
+  const musk = PEOPLE[0].worth;
+  const years = Math.round(p.worth * 1e9 / 1000 / 365).toLocaleString();
+  if(p.rank === 1){
+    return `The world's first trillionaire. SpaceX's record IPO this week pushed his fortune to about $1.1 trillion — larger than Taiwan's entire economy, and more than triple the next-richest person. Spending $1,000 a day, this fortune would last about ${years} years.`;
+  }
+  const pct = p.worth / musk * 100;
+  const pctStr = pct < 1 ? pct.toFixed(1) : Math.round(pct);
+  return `${pctStr}% the size of Musk's fortune. Even so, spending $1,000 every single day, it would take about ${years} years to run out — modern humans have existed for ~300,000.`;
+}
+function closePanel(){
+  panel.classList.remove('open');
+  panel.setAttribute('aria-hidden','true');
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePanel(); });
+
+// ---------- starfield ----------
+const cv = document.getElementById('stars'), ctx = cv.getContext('2d');
+let stars = [];
+function initStars(){
+  cv.width = innerWidth; cv.height = innerHeight;
+  stars = Array.from({length: Math.min(220, innerWidth/4)}, ()=>({
+    x: Math.random()*cv.width, y: Math.random()*cv.height,
+    r: Math.random()*1.3 + .2, tw: Math.random()*Math.PI*2,
+    sp: Math.random()*.015 + .004
+  }));
+}
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  for(const s of stars){
+    s.tw += s.sp;
+    const a = .25 + Math.abs(Math.sin(s.tw)) * .55;
+    ctx.fillStyle = `rgba(234,240,255,${a})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 7); ctx.fill();
+  }
+  if(!reduceMotion) requestAnimationFrame(draw);
+}
+
+// ---------- find yourself ----------
+function parseWorth(raw){
+  const s = raw.trim().toLowerCase().replace(/[$£€\s,]/g,'');
+  const m = s.match(/^(\d+\.?\d*)(k|m|b)?$/);
+  if(!m) return null;
+  let v = parseFloat(m[1]);
+  if(m[2]==='k') v *= 1e3;
+  if(m[2]==='m') v *= 1e6;
+  if(m[2]==='b') v *= 1e9;
+  return v;
+}
+function fmt(n){
+  return n >= 1e9 ? (n/1e9).toFixed(1)+' billion'
+       : n >= 1e6 ? (n/1e6).toFixed(1)+' million'
+       : Math.round(n).toLocaleString();
+}
+function findMe(){
+  const out = document.getElementById('fmResult');
+  const usd = parseWorth(document.getElementById('fmInput').value);
+  if(usd === null || usd < 0){
+    out.innerHTML = '<p class="findme-err">Enter a number — plain (250000) or with k, m, or b (250k, 1.2m).</p>';
+    return;
+  }
+  const scale = 3.5; // the cosmos scale on a desktop viewport
+  const diameter = 2 * Math.sqrt(usd/1e9) * scale;
+  const areaRatio = usd > 0 ? (PEOPLE[0].worth*1e9)/usd : Infinity;
+  if(diameter >= 1){
+    const d = diameter < 10 ? diameter.toFixed(1) : Math.round(diameter);
+    out.innerHTML =
+      `<span class="findme-dot" style="width:${diameter}px;height:${diameter}px" aria-hidden="true"></span>`+
+      `<p>At $${fmt(usd)}, you'd be a dot <b>${d} pixels</b> wide — shown at true scale above this text. `+
+      `Musk's sun could fit <b>${fmt(areaRatio)}</b> of you inside it.</p>`;
+  }else{
+    const zoom = Math.round(1/diameter).toLocaleString();
+    out.innerHTML =
+      `<p>At this scale, you are <b>${diameter.toFixed(3)} pixels</b> wide.`+
+      `<span class="findme-big">This screen cannot display you.</span>`+
+      `The cosmos would need to be magnified <b>${zoom}×</b> before you appeared as a single pixel. `+
+      `Musk's fortune is <b>${fmt(areaRatio)}×</b> yours — and you're still richer than most of the planet.</p>`;
+  }
+}
+document.getElementById('fmInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') findMe();
+});
+
+// ---------- init ----------
+addEventListener('resize', ()=>{
+  initStars(); if(reduceMotion) draw();
+  view==='cosmos' ? startCosmos() : layoutLineup();
+});
+initStars(); draw(); startCosmos();
+</script>
+</body>
+</html>
