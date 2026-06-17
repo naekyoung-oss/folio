@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sound Sketches</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      background: #0a0f26; 
+      color: #eaf0ff; 
+      font-family: 'Space Grotesk', sans-serif;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    header { text-align: center; margin-bottom: 40px; }
+    h1 { font-family: 'Unbounded', sans-serif; font-size: 2.5em; margin-bottom: 8px; }
+    .subtitle { color: #7e89b0; font-size: 14px; margin-bottom: 20px; }
+    .sound-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .sound-btn {
+      background: transparent;
+      border: 2px solid rgba(126, 137, 176, 0.3);
+      color: #eaf0ff;
+      padding: 30px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 150px;
+      position: relative;
+      overflow: hidden;
+    }
+    .sound-btn:hover {
+      border-color: #f5c84b;
+      color: #f5c84b;
+    }
+    .sound-btn.active {
+      background: rgba(245, 200, 75, 0.1);
+      border-color: #f5c84b;
+      color: #f5c84b;
+    }
+    .sound-btn::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(245, 200, 75, 0.3) 0%, transparent 70%);
+      opacity: 0;
+      animation: pulse-ring 0.6s ease-out forwards;
+      pointer-events: none;
+    }
+    .sound-btn.active::before {
+      animation: pulse-ring 0.6s ease-out forwards;
+    }
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(0.8);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+    .icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+    .label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+    }
+    .desc {
+      font-size: 10px;
+      color: #7e89b0;
+      margin-top: 6px;
+    }
+
+    .info-panel {
+      max-width: 800px;
+      margin: 40px auto 0;
+      padding: 20px;
+      background: rgba(20, 25, 48, 0.8);
+      border: 1px solid rgba(126, 137, 176, 0.2);
+      border-radius: 6px;
+      text-align: center;
+    }
+    .info-panel p {
+      font-size: 12px;
+      color: #7e89b0;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 1.8em; }
+      .sound-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sound Sketches</h1>
+    <p class="subtitle">Tiny audio cues for notifications and state changes</p>
+    <p class="subtitle">Click buttons to play · Felt, not heard</p>
+  </header>
+
+  <div class="sound-grid" id="soundGrid"></div>
+
+  <div class="info-panel">
+    <p>🔊 Enable sound on your device • Interaction feedback through audio • Designed for subtle presence</p>
+  </div>
+
+  <script>
+    // Web Audio API sound generator
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    const sounds = [
+      {
+        name: 'Success',
+        icon: '✓',
+        desc: 'Affirmative completion',
+        generate: () => {
+          const now = audioContext.currentTime;
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.setValueAtTime(660, now + 0.1);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+          
+          osc.start(now);
+          osc.stop(now + 0.2);
+        }
+      },
+      {
+        name: 'Error',
+        icon: '✕',
+        desc: 'Alert or warning state',
+        generate: () => {
+          const now = audioContext.currentTime;
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          
+          osc.frequency.setValueAtTime(200, now);
+          osc.frequency.setValueAtTime(150, now + 0.15);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+          
+          osc.start(now);
+          osc.stop(now + 0.3);
+        }
+      },
+      {
+        name: 'Toggle On',
+        icon: '●',
+        desc: 'Activation sound',
+        generate: () => {
+          const now = audioContext.currentTime;
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          
+          osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+          
+          osc.start(now);
+          osc.stop(now + 0.1);
+        }
+      },
+      {
+        name: 'Toggle Off',
+        icon: '○',
+        desc: 'Deactivation sound',
+        generate: () => {
+          const now = audioContext.currentTime;
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          
+          osc.frequency.exponentialRampToValueAtTime(300, now + 0.12);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+          
+          osc.start(now);
+          osc.stop(now + 0.12);
+        }
+      },
+      {
+        name: 'Notification',
+        icon: '◇',
+        desc: 'Message received',
+        generate: () => {
+          const now = audioContext.currentTime;
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.setValueAtTime(550, now + 0.08);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          
+          osc.start(now);
+          osc.stop(now + 0.15);
+        }
+      },
+      {
+        name: 'Loading',
+        icon: '⟳',
+        desc: 'Process in progress',
+        generate: () => {
+          const now = audioContext.currentTime;
+          const freqs = [330, 440, 550];
+          freqs.forEach((freq, i) => {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.frequency.setValueAtTime(freq, now + i * 0.08);
+            gain.gain.setValueAtTime(0.15, now + i * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.1);
+            
+            osc.start(now + i * 0.08);
+            osc.stop(now + i * 0.08 + 0.1);
+          });
+        }
+      },
+      {
+        name: 'Delete',
+        icon: '−',
+        desc: 'Removal confirmed',
+        generate: () => {
+          const now = audioContext.currentTime;
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          
+          osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+          
+          osc.start(now);
+          osc.stop(now + 0.2);
+        }
+      },
+      {
+        name: 'Hover',
+        icon: '·',
+        desc: 'Gentle guidance',
+        generate: () => {
+          const now = audioContext.currentTime;
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          
+          osc.frequency.setValueAtTime(450, now);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+          
+          osc.start(now);
+          osc.stop(now + 0.05);
+        }
+      }
+    ];
+
+    const soundGrid = document.getElementById('soundGrid');
+    soundGrid.innerHTML = sounds.map((sound, idx) => `
+      <button class="sound-btn" onclick="playSound(${idx}, this)">
+        <div class="icon">${sound.icon}</div>
+        <div class="label">${sound.name}</div>
+        <div class="desc">${sound.desc}</div>
+      </button>
+    `).join('');
+
+    window.playSound = function(idx, button) {
+      sounds[idx].generate();
+      
+      button.classList.add('active');
+      setTimeout(() => button.classList.remove('active'), 600);
+    };
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', e => {
+      const num = parseInt(e.key);
+      if(num >= 1 && num <= 8) {
+        const btn = soundGrid.querySelectorAll('.sound-btn')[num - 1];
+        btn && btn.click();
+      }
+    });
+  </script>
+</body>
+</html>

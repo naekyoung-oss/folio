@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generative Grids</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      background: #0a0f26; 
+      color: #eaf0ff; 
+      font-family: 'Space Grotesk', sans-serif;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    header { text-align: center; margin-bottom: 40px; }
+    h1 { font-family: 'Unbounded', sans-serif; font-size: 2.5em; margin-bottom: 8px; }
+    .subtitle { color: #7e89b0; font-size: 14px; margin-bottom: 20px; }
+    .grids-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .grid-item {
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+    .grid-item:hover {
+      transform: scale(1.02);
+    }
+    .grid-item h3 {
+      font-size: 14px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #f5c84b;
+      margin-top: 16px;
+      margin-bottom: 4px;
+    }
+    .grid-item p {
+      font-size: 12px;
+      color: #7e89b0;
+      line-height: 1.6;
+    }
+    svg {
+      width: 100%;
+      height: auto;
+      border-radius: 4px;
+      border: 1px solid rgba(126, 137, 176, 0.2);
+      background: rgba(10, 15, 38, 0.5);
+    }
+    @media (max-width: 768px) {
+      h1 { font-size: 1.8em; }
+      .grids-container { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Generative Grids</h1>
+    <p class="subtitle">Small SVG sketches exploring rhythm, noise, and modular composition</p>
+    <p class="subtitle">Click to regenerate · Hover to inspect</p>
+  </header>
+
+  <div class="grids-container" id="container"></div>
+
+  <script>
+    const grids = [
+      {
+        name: 'Perlin Noise',
+        desc: 'Organic flow through grid space',
+        generate: (seed) => {
+          let svg = '<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">';
+          const cols = 12, rows = 12, scale = 40;
+          let rand = seed;
+          for(let y = 0; y < rows; y++) {
+            for(let x = 0; x < cols; x++) {
+              rand = (rand * 9301 + 49297) % 233280;
+              const noise = rand / 233280;
+              const size = noise * 8 + 2;
+              const opacity = noise * 0.8 + 0.2;
+              const color = noise > 0.5 ? '#f5c84b' : noise > 0.3 ? '#eaf0ff' : '#7e89b0';
+              svg += `<circle cx="${x * scale + 20}" cy="${y * scale + 20}" r="${size}" fill="${color}" opacity="${opacity}"/>`;
+            }
+          }
+          svg += '</svg>';
+          return svg;
+        }
+      },
+      {
+        name: 'Rhythmic Pattern',
+        desc: 'Modular repetition with variation',
+        generate: (seed) => {
+          let svg = '<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">';
+          const cols = 8, rows = 8, scale = 60;
+          for(let y = 0; y < rows; y++) {
+            for(let x = 0; x < cols; x++) {
+              const phase = (x + y + Math.floor(seed / 1000)) % 4;
+              const sizes = [2, 5, 10, 15];
+              const size = sizes[phase];
+              const opacity = (phase + 1) / 4;
+              svg += `<rect x="${x * scale + 10}" y="${y * scale + 10}" width="${size}" height="${size}" fill="#f5c84b" opacity="${opacity}"/>`;
+            }
+          }
+          svg += '</svg>';
+          return svg;
+        }
+      },
+      {
+        name: 'Cellular Automata',
+        desc: 'Conway-inspired life patterns',
+        generate: (seed) => {
+          let svg = '<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">';
+          const cols = 10, rows = 10, scale = 50;
+          let rand = seed;
+          const grid = Array(rows).fill(0).map(() => Array(cols).fill(0).map(() => Math.random() > 0.6 ? 1 : 0));
+          for(let y = 0; y < rows; y++) {
+            for(let x = 0; x < cols; x++) {
+              if(grid[y][x]) {
+                svg += `<rect x="${x * scale + 5}" y="${y * scale + 5}" width="40" height="40" fill="#eaf0ff" opacity="0.8"/>`;
+              } else {
+                svg += `<circle cx="${x * scale + 25}" cy="${y * scale + 25}" r="2" fill="#7e89b0" opacity="0.3"/>`;
+              }
+            }
+          }
+          svg += '</svg>';
+          return svg;
+        }
+      },
+      {
+        name: 'Gradient Flow',
+        desc: 'Directional noise field',
+        generate: (seed) => {
+          let svg = '<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">';
+          const cols = 15, rows = 15;
+          for(let y = 0; y < rows; y++) {
+            for(let x = 0; x < cols; x++) {
+              const distance = Math.sqrt((x - 7.5) ** 2 + (y - 7.5) ** 2);
+              const opacity = Math.max(0.1, 1 - distance / 15);
+              const size = opacity * 8;
+              svg += `<circle cx="${x * 33 + 16}" cy="${y * 33 + 16}" r="${size}" fill="#f5c84b" opacity="${opacity}"/>`;
+            }
+          }
+          svg += '</svg>';
+          return svg;
+        }
+      },
+      {
+        name: 'Voronoi Sketch',
+        desc: 'Cellular tessellation',
+        generate: (seed) => {
+          let svg = '<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">';
+          let rand = seed;
+          const points = [];
+          for(let i = 0; i < 8; i++) {
+            rand = (rand * 9301 + 49297) % 233280;
+            const x = (rand / 233280) * 450 + 25;
+            rand = (rand * 9301 + 49297) % 233280;
+            const y = (rand / 233280) * 450 + 25;
+            points.push({x, y});
+            svg += `<circle cx="${x}" cy="${y}" r="6" fill="#f5c84b" stroke="#eaf0ff" stroke-width="2"/>`;
+          }
+          for(let i = 0; i < points.length; i++) {
+            for(let j = i + 1; j < points.length; j++) {
+              const dx = points[j].x - points[i].x;
+              const dy = points[j].y - points[i].y;
+              const dist = Math.sqrt(dx*dx + dy*dy);
+              if(dist < 200) {
+                svg += `<line x1="${points[i].x}" y1="${points[i].y}" x2="${points[j].x}" y2="${points[j].y}" stroke="#7e89b0" stroke-width="1" opacity="0.5"/>`;
+              }
+            }
+          }
+          svg += '</svg>';
+          return svg;
+        }
+      },
+      {
+        name: 'Fractal Branches',
+        desc: 'Recursive self-similarity',
+        generate: (seed) => {
+          let svg = '<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">';
+          
+          const branch = (x, y, angle, depth, svg_str) => {
+            if(depth < 0) return svg_str;
+            const len = 30 - depth * 3;
+            const x2 = x + Math.cos(angle) * len;
+            const y2 = y + Math.sin(angle) * len;
+            const color = depth % 2 === 0 ? '#f5c84b' : '#eaf0ff';
+            svg_str += `<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${3 - depth * 0.3}" opacity="${1 - depth * 0.1}"/>`;
+            svg_str = branch(x2, y2, angle - 0.3, depth - 1, svg_str);
+            svg_str = branch(x2, y2, angle + 0.3, depth - 1, svg_str);
+            return svg_str;
+          };
+          
+          svg += branch(250, 400, Math.PI / 2, 5, '');
+          svg += '</svg>';
+          return svg;
+        }
+      }
+    ];
+
+    const container = document.getElementById('container');
+    let seed = Date.now();
+
+    function render() {
+      container.innerHTML = grids.map((grid, i) => `
+        <div class="grid-item" onclick="regenerateGrid(${i})">
+          ${grid.generate(seed + i)}
+          <h3>${grid.name}</h3>
+          <p>${grid.desc}</p>
+        </div>
+      `).join('');
+    }
+
+    window.regenerateGrid = function(index) {
+      seed = Date.now() + index;
+      render();
+    };
+
+    render();
+
+    document.addEventListener('keydown', e => {
+      if(e.key === ' ') {
+        seed = Date.now();
+        render();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cube Navigation</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;500;700&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --space:#070B1A; --space-2:#0D1330; --star:#EAF0FF;
+    --gold:#F5C84B; --dim:#7E89B0; --line:rgba(126,137,176,.25);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:var(--space);color:var(--star);font-family:'Space Grotesk',sans-serif;overflow:hidden;
+    background:radial-gradient(120% 90% at 50% -10%, var(--space-2), var(--space) 65%)}
+  canvas#scene{position:fixed;inset:0;z-index:0;display:block;cursor:grab;touch-action:none}
+  canvas#scene.grabbing{cursor:grabbing}
+
+  .hud{position:fixed;z-index:2;left:0;right:0;top:0;padding:22px 24px;pointer-events:none;
+    background:linear-gradient(180deg, rgba(7,11,26,.8), transparent)}
+  .eyebrow{font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+  h1{font-family:'Unbounded',sans-serif;font-weight:700;font-size:clamp(20px,3vw,32px);line-height:1}
+  .hud p{color:var(--dim);font-size:12px;margin-top:6px;max-width:40ch;line-height:1.5}
+
+  /* focused-face readout */
+  #focus{position:fixed;z-index:2;left:50%;bottom:88px;transform:translateX(-50%) translateY(8px);
+    text-align:center;opacity:0;transition:opacity .4s, transform .4s;pointer-events:none}
+  #focus.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #focus .n{font-family:'Unbounded',sans-serif;font-weight:300;font-size:12px;letter-spacing:.4em;color:var(--gold)}
+  #focus .l{font-family:'Unbounded',sans-serif;font-weight:500;font-size:clamp(22px,4vw,38px);margin-top:6px}
+  #focus .d{color:var(--dim);font-size:12px;margin-top:6px;letter-spacing:.04em}
+
+  .hint{position:fixed;z-index:2;left:0;right:0;bottom:0;text-align:center;color:var(--dim);
+    font-size:11px;letter-spacing:.08em;padding:16px;background:linear-gradient(0deg, rgba(7,11,26,.8), transparent);pointer-events:none}
+  .hint b{color:var(--gold);font-weight:500}
+
+  /* face shortcuts */
+  .faces{position:fixed;z-index:2;right:22px;top:50%;transform:translateY(-50%);
+    display:flex;flex-direction:column;gap:8px}
+  .faces button{font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--dim);background:rgba(13,19,48,.5);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:999px;padding:7px 14px;cursor:pointer;transition:all .2s;text-align:right;min-width:118px}
+  .faces button:hover{color:var(--star);border-color:var(--dim)}
+  .faces button.active{color:var(--space);background:var(--gold);border-color:var(--gold);box-shadow:0 0 20px rgba(245,200,75,.35)}
+  .faces button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  @media (max-width:640px){ .faces{display:none} #focus{bottom:74px} }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div class="hud">
+  <div class="eyebrow">Spatial · WebGL</div>
+  <h1>Cube Navigation</h1>
+  <p>A navigation surface as a 3D object. Drag to spin, tap a face — or pick a section — to snap it forward.</p>
+</div>
+
+<div class="faces" id="faces"></div>
+
+<div id="focus"><div class="n"></div><div class="l"></div><div class="d"></div></div>
+
+<div class="hint">Drag to rotate · tap a face to focus · tap empty space to release</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three/r128/three.min.js"></script>
+<script>
+const faces = [
+  {key:'px', n:'01', label:'Work',        desc:'Selected case studies'},
+  {key:'nx', n:'02', label:'About',       desc:'Background & approach'},
+  {key:'py', n:'03', label:'Experiments', desc:'Weekend prototypes'},
+  {key:'ny', n:'04', label:'Writing',     desc:'Notes & essays'},
+  {key:'pz', n:'05', label:'Home',        desc:'Start here'},
+  {key:'nz', n:'06', label:'Contact',     desc:'Say hello'},
+];
+// snap targets: bring each face normal toward the camera (+Z)
+const targets = [
+  new THREE.Euler(0, -Math.PI/2, 0),   // px right
+  new THREE.Euler(0,  Math.PI/2, 0),   // nx left
+  new THREE.Euler(Math.PI/2, 0, 0),    // py top
+  new THREE.Euler(-Math.PI/2, 0, 0),   // ny bottom
+  new THREE.Euler(0, 0, 0),            // pz front
+  new THREE.Euler(0, Math.PI, 0),      // nz back
+].map(e => new THREE.Quaternion().setFromEuler(e));
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cv = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({canvas:cv, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(2, devicePixelRatio||1));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+camera.position.set(0,0,5.2);
+
+// face textures
+function faceTexture(f){
+  const s=512, c=document.createElement('canvas'); c.width=c.height=s;
+  const x=c.getContext('2d');
+  x.fillStyle='#0D1330'; x.fillRect(0,0,s,s);
+  const g=x.createRadialGradient(s/2,s*0.35,40,s/2,s/2,s*0.8);
+  g.addColorStop(0,'rgba(245,200,75,0.12)'); g.addColorStop(1,'rgba(13,19,48,0)');
+  x.fillStyle=g; x.fillRect(0,0,s,s);
+  x.strokeStyle='rgba(245,200,75,0.55)'; x.lineWidth=4; x.strokeRect(26,26,s-52,s-52);
+  // corner ticks
+  x.strokeStyle='#F5C84B'; x.lineWidth=4;
+  [[26,26,1,1],[s-26,26,-1,1],[26,s-26,1,-1],[s-26,s-26,-1,-1]].forEach(([cx,cy,sx,sy])=>{
+    x.beginPath(); x.moveTo(cx, cy+sy*34); x.lineTo(cx,cy); x.lineTo(cx+sx*34, cy); x.stroke();
+  });
+  x.fillStyle='#F5C84B'; x.font='300 34px Unbounded, sans-serif'; x.textAlign='center';
+  x.fillText(f.n, s/2, 130);
+  x.fillStyle='#EAF0FF'; x.font='500 64px Unbounded, sans-serif';
+  x.fillText(f.label, s/2, s/2+22);
+  x.fillStyle='#7E89B0'; x.font='400 22px Space Grotesk, sans-serif';
+  x.fillText(f.desc, s/2, s/2+74);
+  x.fillStyle='#7E89B0'; x.font='400 18px Space Grotesk, sans-serif';
+  x.fillText('NAEKYOUNG KWAK', s/2, s-58);
+  const t=new THREE.CanvasTexture(c); t.anisotropy=4; return t;
+}
+const materials = faces.map(f=> new THREE.MeshBasicMaterial({map:faceTexture(f)}));
+const cube = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), materials);
+scene.add(cube);
+
+// glowing edges
+const edges = new THREE.LineSegments(
+  new THREE.EdgesGeometry(cube.geometry),
+  new THREE.LineBasicMaterial({color:0xF5C84B, transparent:true, opacity:0.55})
+);
+cube.add(edges);
+// faint halo cube
+const halo = new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.BoxGeometry(2.5,2.5,2.5)),
+  new THREE.LineBasicMaterial({color:0x5B8CFF, transparent:true, opacity:0.12})
+);
+cube.add(halo);
+
+// starfield
+const starGeo = new THREE.BufferGeometry();
+const N=600, pos=new Float32Array(N*3);
+for(let i=0;i<N;i++){ const r=14+Math.random()*22, t=Math.random()*Math.PI*2, p=Math.acos(2*Math.random()-1);
+  pos[i*3]=r*Math.sin(p)*Math.cos(t); pos[i*3+1]=r*Math.sin(p)*Math.sin(t); pos[i*3+2]=r*Math.cos(p); }
+starGeo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xEAF0FF, size:0.06, transparent:true, opacity:0.7})));
+
+// interaction
+const ray = new THREE.Raycaster();
+let dragging=false, moved=false, lastX=0, lastY=0, focusIdx=-1, hoverIdx=-1;
+let autoVel = 0.0016;
+
+function setHud(i){
+  const box=document.getElementById('focus');
+  if(i<0){ box.classList.remove('show'); }
+  else{ box.querySelector('.n').textContent=faces[i].n; box.querySelector('.l').textContent=faces[i].label;
+    box.querySelector('.d').textContent=faces[i].desc; box.classList.add('show'); }
+  document.querySelectorAll('.faces button').forEach((b,bi)=>b.classList.toggle('active', bi===i));
+}
+function focusFace(i){ focusIdx=i; setHud(i); }
+function release(){ focusIdx=-1; setHud(-1); }
+
+function pointer(e){ const r=cv.getBoundingClientRect(); return {x:((e.clientX-r.left)/r.width)*2-1, y:-((e.clientY-r.top)/r.height)*2+1}; }
+function pick(e){
+  const p=pointer(e); ray.setFromCamera(new THREE.Vector2(p.x,p.y), camera);
+  const hit=ray.intersectObject(cube,false)[0];
+  return hit && hit.face ? hit.face.materialIndex : -1;
+}
+cv.addEventListener('pointerdown', e=>{ dragging=true; moved=false; lastX=e.clientX; lastY=e.clientY; cv.classList.add('grabbing'); cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e=>{
+  if(dragging){
+    const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
+    if(Math.abs(dx)+Math.abs(dy)>2){ moved=true; focusIdx=-1; setHud(-1); }
+    const qx=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), dx*0.006);
+    const qy=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), dy*0.006);
+    cube.quaternion.premultiply(qx).premultiply(qy);
+  } else {
+    const i=pick(e);
+    if(i!==hoverIdx){
+      if(hoverIdx>=0) materials[hoverIdx].color.setHex(0xffffff);
+      hoverIdx=i; cv.style.cursor = i>=0?'pointer':'grab';
+      if(i>=0) materials[i].color.setHex(0xffe9b0);
+    }
+  }
+});
+cv.addEventListener('pointerup', e=>{
+  dragging=false; cv.classList.remove('grabbing');
+  if(!moved){ const i=pick(e); if(i>=0 && i!==focusIdx) focusFace(i); else release(); }
+});
+cv.addEventListener('pointerleave', ()=>{ if(hoverIdx>=0){ materials[hoverIdx].color.setHex(0xffffff); hoverIdx=-1; } });
+
+// shortcuts
+const facesEl=document.getElementById('faces');
+facesEl.innerHTML = faces.map((f,i)=>`<button data-i="${i}">${f.n} · ${f.label}</button>`).join('');
+facesEl.addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) focusFace(+b.dataset.i); });
+
+function resize(){
+  const w=innerWidth, h=innerHeight;
+  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+function animate(){
+  if(focusIdx>=0){
+    cube.quaternion.slerp(targets[focusIdx], 0.12);
+  } else if(!dragging && !reduce){
+    const qy=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), autoVel);
+    const qx=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), autoVel*0.4);
+    cube.quaternion.premultiply(qy).premultiply(qx);
+  }
+  edges.material.opacity = 0.45 + Math.sin(Date.now()*0.002)*0.12;
+  renderer.render(scene,camera);
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>
