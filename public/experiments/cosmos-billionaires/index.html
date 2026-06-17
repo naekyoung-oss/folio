@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Wealth Cosmos — Richest People</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #010108;
+    color: #f0f0f8;
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+    overflow: hidden;
+    width: 100vw; height: 100vh;
+  }
+
+  #canvas-container {
+    position: absolute; inset: 0;
+  }
+
+  canvas { display: block; }
+
+  /* ── labels ── */
+  .star-label {
+    pointer-events: none;
+    user-select: none;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    color: rgba(255,255,255,0.85);
+    text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 0 16px rgba(0,0,0,0.7);
+    white-space: nowrap;
+    transform: translateX(-50%);
+    padding-top: 6px;
+    letter-spacing: 0.02em;
+    transition: opacity 0.2s;
+  }
+
+  /* ── Top bar ── */
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    padding: 20px 24px 16px;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    background: linear-gradient(180deg, rgba(1,1,8,0.85) 0%, transparent 100%);
+    z-index: 10;
+    pointer-events: none;
+  }
+  #topbar-left { pointer-events: auto; }
+  #title {
+    font-size: 18px; font-weight: 600; letter-spacing: -0.02em;
+    color: #fff;
+    line-height: 1.2;
+  }
+  #subtitle {
+    font-size: 11px; color: rgba(255,255,255,0.45);
+    margin-top: 4px; letter-spacing: 0.05em; text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  #controls-hint {
+    font-size: 10px; color: rgba(255,255,255,0.3);
+    margin-top: 6px; letter-spacing: 0.04em;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    position: fixed; right: 0; top: 0; bottom: 0;
+    width: 240px;
+    background: rgba(5, 5, 18, 0.78);
+    backdrop-filter: blur(16px);
+    border-left: 1px solid rgba(255,255,255,0.07);
+    z-index: 10;
+    display: flex; flex-direction: column;
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+  }
+  #sidebar.collapsed { transform: translateX(240px); }
+
+  #sidebar-toggle {
+    position: fixed; right: 0; top: 50%;
+    transform: translateY(-50%);
+    z-index: 11;
+    background: rgba(5, 5, 18, 0.85);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-right: none;
+    color: rgba(255,255,255,0.55);
+    padding: 12px 7px;
+    cursor: pointer;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    border-radius: 4px 0 0 4px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transition: color 0.2s, background 0.2s, right 0.3s;
+  }
+  #sidebar-toggle:hover { color: #fff; background: rgba(15,15,35,0.95); }
+  #sidebar-toggle.open { right: 240px; }
+
+  #sidebar-header {
+    padding: 20px 16px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+
+  #search-wrap {
+    padding: 10px 12px 8px;
+    flex-shrink: 0;
+  }
+  #search {
+    width: 100%; background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    color: #fff; font-size: 12px;
+    padding: 7px 10px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  #search::placeholder { color: rgba(255,255,255,0.25); }
+  #search:focus { border-color: rgba(255,255,255,0.28); }
+
+  #list-container {
+    flex: 1; overflow-y: auto;
+    padding: 4px 0 16px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.1) transparent;
+  }
+  #list-container::-webkit-scrollbar { width: 3px; }
+  #list-container::-webkit-scrollbar-track { background: transparent; }
+  #list-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+  .list-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-radius: 0;
+  }
+  .list-item:hover { background: rgba(255,255,255,0.06); }
+  .list-item.active { background: rgba(255,255,255,0.1); }
+  .list-rank {
+    font-size: 9px; color: rgba(255,255,255,0.25);
+    font-family: 'JetBrains Mono', monospace;
+    min-width: 22px; text-align: right;
+    flex-shrink: 0;
+  }
+  .list-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 5px currentColor;
+  }
+  .list-name {
+    font-size: 12px; color: rgba(255,255,255,0.78);
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .list-nw {
+    font-size: 10px; color: rgba(255,255,255,0.35);
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+
+  /* ── Legend ── */
+  #legend {
+    position: fixed; left: 20px; bottom: 20px;
+    z-index: 10;
+    background: rgba(5,5,18,0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 6px;
+    padding: 12px 14px;
+    max-width: 190px;
+  }
+  #legend-title {
+    font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(255,255,255,0.3); margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .legend-row {
+    display: flex; align-items: center; gap: 7px;
+    margin-bottom: 5px;
+  }
+  .legend-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-label { font-size: 11px; color: rgba(255,255,255,0.55); }
+
+  /* ── Info panel ── */
+  #info-panel {
+    position: fixed; left: 20px; top: 90px;
+    z-index: 10;
+    background: rgba(5,5,18,0.82);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 16px 18px;
+    width: 220px;
+    opacity: 0; pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  #info-panel.visible {
+    opacity: 1; pointer-events: auto;
+    transform: translateY(0);
+  }
+  #info-rank {
+    font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(255,255,255,0.3); margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  #info-name {
+    font-size: 16px; font-weight: 600; letter-spacing: -0.02em;
+    color: #fff; margin-bottom: 2px; line-height: 1.2;
+  }
+  #info-nw {
+    font-size: 22px; font-weight: 700; letter-spacing: -0.03em;
+    margin: 8px 0 4px;
+  }
+  #info-nw-label {
+    font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  #info-divider {
+    border: none; border-top: 1px solid rgba(255,255,255,0.08);
+    margin: 10px 0;
+  }
+  #info-company { font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 3px; }
+  #info-country { font-size: 11px; color: rgba(255,255,255,0.38); }
+  #info-category {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 8px; font-size: 10px; letter-spacing: 0.06em;
+    text-transform: uppercase; color: rgba(255,255,255,0.45);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  #info-cat-dot { width: 6px; height: 6px; border-radius: 50%; }
+  #info-close {
+    position: absolute; top: 10px; right: 12px;
+    background: none; border: none; color: rgba(255,255,255,0.3);
+    cursor: pointer; font-size: 14px; line-height: 1;
+    padding: 4px; transition: color 0.15s;
+  }
+  #info-close:hover { color: rgba(255,255,255,0.7); }
+
+  /* ── Disclaimer ── */
+  #disclaimer {
+    position: fixed; bottom: 14px; right: 250px;
+    font-size: 9px; color: rgba(255,255,255,0.2);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.03em;
+    z-index: 10;
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<div id="topbar">
+  <div id="topbar-left">
+    <div id="title">Wealth Cosmos</div>
+    <div id="subtitle">World's Richest People — 2026</div>
+    <div id="controls-hint">Drag to rotate · Scroll to zoom · Right-click to pan</div>
+  </div>
+</div>
+
+<button id="sidebar-toggle" class="open">List</button>
+
+<div id="sidebar">
+  <div id="sidebar-header">50 Richest People</div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search name…" autocomplete="off"/>
+  </div>
+  <div id="list-container" id="list"></div>
+</div>
+
+<div id="info-panel">
+  <button id="info-close">✕</button>
+  <div id="info-rank"></div>
+  <div id="info-name"></div>
+  <div id="info-nw"></div>
+  <div id="info-nw-label">Net Worth (USD Billions)</div>
+  <hr id="info-divider"/>
+  <div id="info-company"></div>
+  <div id="info-country"></div>
+  <div id="info-category"><span id="info-cat-dot"></span><span id="info-cat-text"></span></div>
+</div>
+
+<div id="legend">
+  <div id="legend-title">Industry</div>
+  <div id="legend-rows"></div>
+</div>
+
+<div id="disclaimer">Net worth figures are approximate (2026 estimates)</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+/* ─── Data ─── */
+const CATEGORIES = {
+  'Technology':    { color: '#5ec8f8', hex: 0x5ec8f8 },
+  'E-commerce':    { color: '#60f8c8', hex: 0x60f8c8 },
+  'Luxury':        { color: '#c77dff', hex: 0xc77dff },
+  'Finance':       { color: '#ffd166', hex: 0xffd166 },
+  'Retail':        { color: '#ff9f5e', hex: 0xff9f5e },
+  'Fashion':       { color: '#ff6ec7', hex: 0xff6ec7 },
+  'Energy':        { color: '#6effb0', hex: 0x6effb0 },
+  'Food':          { color: '#ff8c5e', hex: 0xff8c5e },
+  'Media':         { color: '#5effe0', hex: 0x5effe0 },
+  'Industrial':    { color: '#b0c4ff', hex: 0xb0c4ff },
+  'Telecom':       { color: '#b0ff5e', hex: 0xb0ff5e },
+  'Automotive':    { color: '#7b7bff', hex: 0x7b7bff },
+  'Mining':        { color: '#ff5e5e', hex: 0xff5e5e },
+  'Real Estate':   { color: '#ffe45e', hex: 0xffe45e },
+};
+
+const PEOPLE = [
+  { name: 'Elon Musk',                  nw: 790, cat: 'Technology',  country: 'USA',     co: 'Tesla / SpaceX / xAI' },
+  { name: 'Larry Page',                 nw: 257, cat: 'Technology',  country: 'USA',     co: 'Alphabet (Google)' },
+  { name: 'Sergey Brin',                nw: 237, cat: 'Technology',  country: 'USA',     co: 'Alphabet (Google)' },
+  { name: 'Jeff Bezos',                 nw: 224, cat: 'E-commerce',  country: 'USA',     co: 'Amazon' },
+  { name: 'Mark Zuckerberg',            nw: 222, cat: 'Technology',  country: 'USA',     co: 'Meta' },
+  { name: 'Larry Ellison',              nw: 190, cat: 'Technology',  country: 'USA',     co: 'Oracle' },
+  { name: 'Bernard Arnault',            nw: 171, cat: 'Luxury',      country: 'France',  co: 'LVMH' },
+  { name: 'Steve Ballmer',              nw: 168, cat: 'Technology',  country: 'USA',     co: 'Microsoft' },
+  { name: 'Jensen Huang',               nw: 154, cat: 'Technology',  country: 'USA',     co: 'Nvidia' },
+  { name: 'Warren Buffett',             nw: 149, cat: 'Finance',     country: 'USA',     co: 'Berkshire Hathaway' },
+  { name: 'Amancio Ortega',             nw: 148, cat: 'Fashion',     country: 'Spain',   co: 'Inditex (Zara)' },
+  { name: 'Alice Walton',               nw: 137, cat: 'Retail',      country: 'USA',     co: 'Walmart' },
+  { name: 'Michael Dell',               nw: 130, cat: 'Technology',  country: 'USA',     co: 'Dell Technologies' },
+  { name: 'Rob Walton',                 nw: 118, cat: 'Retail',      country: 'USA',     co: 'Walmart' },
+  { name: 'Jim Walton',                 nw: 116, cat: 'Retail',      country: 'USA',     co: 'Walmart' },
+  { name: 'Mukesh Ambani',              nw: 115, cat: 'Energy',      country: 'India',   co: 'Reliance Industries' },
+  { name: 'Bill Gates',                 nw: 112, cat: 'Technology',  country: 'USA',     co: 'Microsoft' },
+  { name: 'Michael Bloomberg',          nw: 106, cat: 'Media',       country: 'USA',     co: 'Bloomberg LP' },
+  { name: 'Carlos Slim Helú',           nw: 102, cat: 'Telecom',     country: 'Mexico',  co: 'América Móvil' },
+  { name: 'Françoise Bettencourt',      nw:  96, cat: 'Luxury',      country: 'France',  co: 'L\'Oréal' },
+  { name: 'Gautam Adani',               nw:  94, cat: 'Energy',      country: 'India',   co: 'Adani Group' },
+  { name: 'Zhang Yiming',               nw:  70, cat: 'Technology',  country: 'China',   co: 'ByteDance (TikTok)' },
+  { name: 'Charles Koch',               nw:  68, cat: 'Industrial',  country: 'USA',     co: 'Koch Industries' },
+  { name: 'Julia Koch',                 nw:  68, cat: 'Industrial',  country: 'USA',     co: 'Koch Industries' },
+  { name: 'Zhong Shanshan',             nw:  62, cat: 'Food',        country: 'China',   co: 'Nongfu Spring' },
+  { name: 'David Thomson',              nw:  58, cat: 'Media',       country: 'Canada',  co: 'Thomson Reuters' },
+  { name: 'Colin Huang',                nw:  56, cat: 'E-commerce',  country: 'China',   co: 'Pinduoduo / Temu' },
+  { name: 'Stephen Schwarzman',         nw:  52, cat: 'Finance',     country: 'USA',     co: 'Blackstone' },
+  { name: 'Ma Huateng',                 nw:  51, cat: 'Technology',  country: 'China',   co: 'Tencent' },
+  { name: 'Tadashi Yanai',              nw:  49, cat: 'Fashion',     country: 'Japan',   co: 'Uniqlo (Fast Retailing)' },
+  { name: 'Jacqueline Mars',            nw:  47, cat: 'Food',        country: 'USA',     co: 'Mars Inc.' },
+  { name: 'John Mars',                  nw:  47, cat: 'Food',        country: 'USA',     co: 'Mars Inc.' },
+  { name: 'Giovanni Ferrero',           nw:  44, cat: 'Food',        country: 'Italy',   co: 'Ferrero' },
+  { name: 'Ken Griffin',                nw:  43, cat: 'Finance',     country: 'USA',     co: 'Citadel' },
+  { name: 'Lukas Walton',               nw:  41, cat: 'Retail',      country: 'USA',     co: 'Walmart' },
+  { name: 'Phil Knight',                nw:  40, cat: 'Fashion',     country: 'USA',     co: 'Nike' },
+  { name: 'Robin Zeng',                 nw:  38, cat: 'Industrial',  country: 'China',   co: 'CATL' },
+  { name: 'Klaus-Michael Kuehne',       nw:  38, cat: 'Industrial',  country: 'Germany', co: 'Kuehne + Nagel' },
+  { name: 'Len Blavatnik',              nw:  36, cat: 'Industrial',  country: 'UK',      co: 'Access Industries' },
+  { name: 'MacKenzie Scott',            nw:  35, cat: 'E-commerce',  country: 'USA',     co: 'Amazon' },
+  { name: 'Masayoshi Son',              nw:  34, cat: 'Technology',  country: 'Japan',   co: 'SoftBank' },
+  { name: 'Vladimir Potanin',           nw:  32, cat: 'Mining',      country: 'Russia',  co: 'Norilsk Nickel' },
+  { name: 'Susanne Klatten',            nw:  31, cat: 'Automotive',  country: 'Germany', co: 'BMW' },
+  { name: 'Thomas Peterffy',            nw:  30, cat: 'Finance',     country: 'USA',     co: 'Interactive Brokers' },
+  { name: 'Reinhold Würth',             nw:  29, cat: 'Industrial',  country: 'Germany', co: 'Würth Group' },
+  { name: 'Rupert Murdoch',             nw:  26, cat: 'Media',       country: 'USA',     co: 'News Corp / Fox' },
+  { name: 'Daniel Gilbert',             nw:  24, cat: 'Finance',     country: 'USA',     co: 'Rocket Companies' },
+  { name: 'Harold Hamm',                nw:  21, cat: 'Energy',      country: 'USA',     co: 'Continental Resources' },
+  { name: 'Donald Bren',                nw:  18, cat: 'Real Estate', country: 'USA',     co: 'Irvine Company' },
+  { name: 'Stefan Quandt',              nw:  17, cat: 'Automotive',  country: 'Germany', co: 'BMW' },
+];
+
+PEOPLE.forEach((p, i) => p.rank = i + 1);
+
+/* ─── Derived stats ─── */
+const maxNW = Math.max(...PEOPLE.map(p => p.nw));
+const minNW = Math.min(...PEOPLE.map(p => p.nw));
+const usedCats = [...new Set(PEOPLE.map(p => p.cat))];
+
+/* ─── Scene setup ─── */
+const container = document.getElementById('canvas-container');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x010108);
+scene.fog = new THREE.FogExp2(0x010108, 0.0025);
+
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 2000);
+camera.position.set(0, 55, 130);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+container.appendChild(renderer.domElement);
+
+/* CSS2D label renderer */
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.pointerEvents = 'none';
+container.appendChild(labelRenderer.domElement);
+
+/* Orbit controls */
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 5;
+controls.maxDistance = 500;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.18;
+controls.target.set(0, 0, 0);
+controls.enablePan = true;
+controls.panSpeed = 0.8;
+controls.zoomSpeed = 1.2;
+
+/* ─── Glow texture factory ─── */
+function makeGlowTexture(color = '#ffffff') {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const center = size / 2;
+  const grad = ctx.createRadialGradient(center, center, 0, center, center, center);
+  grad.addColorStop(0, color + 'ff');
+  grad.addColorStop(0.2, color + 'cc');
+  grad.addColorStop(0.5, color + '44');
+  grad.addColorStop(1, '#00000000');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(canvas);
+}
+
+const glowTextures = {};
+for (const [cat, cfg] of Object.entries(CATEGORIES)) {
+  glowTextures[cat] = makeGlowTexture(cfg.color);
+}
+
+/* ─── Star size scaling (cube-root, then remap) ─── */
+function starRadius(nw) {
+  const cbMin = Math.cbrt(minNW);
+  const cbMax = Math.cbrt(maxNW);
+  const t = (Math.cbrt(nw) - cbMin) / (cbMax - cbMin);
+  return 0.55 + t * 5.5;
+}
+
+/* ─── Galaxy spiral position ─── */
+function galaxyPosition(index, total) {
+  const i = index + 1;
+  if (index === 0) return new THREE.Vector3(0, 0, 0); // richest at centre
+  const t = i / total;
+  const arms = 3;
+  const arm = index % arms;
+  const radius = 10 + 70 * Math.pow(t, 0.58);
+  const spiralTurns = 2.4;
+  const angle = t * spiralTurns * Math.PI * 2 + arm * (Math.PI * 2 / arms);
+  const jitterR = (Math.random() - 0.5) * 5 * t;
+  const jitterA = (Math.random() - 0.5) * 0.18;
+  const x = (radius + jitterR) * Math.cos(angle + jitterA);
+  const z = (radius + jitterR) * Math.sin(angle + jitterA);
+  const y = (Math.random() - 0.5) * 4 * (1 - t * 0.6);
+  return new THREE.Vector3(x, y, z);
+}
+
+/* ─── Stars (billionaires) ─── */
+const starMeshes = [];
+const positions = PEOPLE.map((p, i) => galaxyPosition(i, PEOPLE.length));
+
+// Precompute to make layout deterministic (no random call after seed)
+const starGroup = new THREE.Group();
+scene.add(starGroup);
+
+PEOPLE.forEach((person, i) => {
+  const pos = positions[i];
+  const cat = CATEGORIES[person.cat];
+  const r = starRadius(person.nw);
+
+  // Core sphere
+  const geo = new THREE.SphereGeometry(r * 0.38, 20, 20);
+  const mat = new THREE.MeshBasicMaterial({ color: cat.hex });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.copy(pos);
+  mesh.userData = { person, index: i, baseRadius: r };
+  starGroup.add(mesh);
+  starMeshes.push(mesh);
+
+  // Glow sprite
+  const spriteMat = new THREE.SpriteMaterial({
+    map: glowTextures[person.cat],
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    opacity: 0.85,
+  });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.setScalar(r * 3.2);
+  sprite.position.copy(pos);
+  starGroup.add(sprite);
+
+  // CSS2D label (always-on for top 12, hidden for rest until hover)
+  const div = document.createElement('div');
+  div.className = 'star-label';
+  div.textContent = person.name;
+  div.style.color = cat.color;
+  if (i >= 12) div.style.opacity = '0';
+  div.dataset.index = i;
+  const label = new CSS2DObject(div);
+  label.position.set(0, r * 0.6 + 0.5, 0);
+  mesh.add(label);
+
+  person._mesh = mesh;
+  person._label = div;
+});
+
+/* ─── Galaxy-core glow (extra large for Musk) ─── */
+const coreSpriteMat = new THREE.SpriteMaterial({
+  map: makeGlowTexture('#ffe8a0'),
+  transparent: true,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  opacity: 0.55,
+});
+const coreSprite = new THREE.Sprite(coreSpriteMat);
+coreSprite.scale.setScalar(28);
+coreSprite.position.set(0, 0, 0);
+scene.add(coreSprite);
+
+/* ─── Background starfield ─── */
+(function buildStarfield() {
+  const count = 5000;
+  const pos = new Float32Array(count * 3);
+  const cols = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const radius = 300 + Math.random() * 200;
+    pos[i * 3]     = radius * Math.sin(phi) * Math.cos(theta);
+    pos[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+    pos[i * 3 + 2] = radius * Math.cos(phi);
+    const warm = Math.random();
+    cols[i * 3]     = 0.7 + warm * 0.3;
+    cols[i * 3 + 1] = 0.75 + (1 - warm) * 0.15;
+    cols[i * 3 + 2] = 0.9 + (1 - warm) * 0.1;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+  const mat = new THREE.PointsMaterial({
+    size: 0.55, sizeAttenuation: true,
+    vertexColors: true, transparent: true, opacity: 0.75,
+    depthWrite: false,
+  });
+  scene.add(new THREE.Points(geo, mat));
+})();
+
+/* ─── Nebula clouds ─── */
+(function buildNebulae() {
+  const clouds = [
+    { pos: new THREE.Vector3(40, 8, -20),  color: '#2d1060', scale: 55, op: 0.18 },
+    { pos: new THREE.Vector3(-35, -5, 30), color: '#0a3060', scale: 48, op: 0.15 },
+    { pos: new THREE.Vector3(10, -10, 50), color: '#1a0d3a', scale: 60, op: 0.20 },
+    { pos: new THREE.Vector3(-50, 6, -10), color: '#102a20', scale: 50, op: 0.15 },
+  ];
+  clouds.forEach(c => {
+    const tex = makeGlowTexture(c.color);
+    const mat = new THREE.SpriteMaterial({
+      map: tex, transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false, opacity: c.op,
+    });
+    const sp = new THREE.Sprite(mat);
+    sp.scale.setScalar(c.scale);
+    sp.position.copy(c.pos);
+    scene.add(sp);
+  });
+})();
+
+/* ─── Raycasting ─── */
+const raycaster = new THREE.Raycaster();
+raycaster.params.Points.threshold = 0.5;
+const mouse = new THREE.Vector2();
+let hoveredIndex = -1;
+let selectedIndex = -1;
+let isPointerDown = false;
+let pointerMoved = false;
+
+function onPointerMove(e) {
+  if (isPointerDown) pointerMoved = true;
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  updateHover();
+}
+
+function updateHover() {
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(starMeshes);
+  const newHover = hits.length ? hits[0].object.userData.index : -1;
+  if (newHover !== hoveredIndex) {
+    if (hoveredIndex >= 0 && hoveredIndex !== selectedIndex) {
+      unhighlightStar(hoveredIndex);
+    }
+    hoveredIndex = newHover;
+    if (hoveredIndex >= 0 && hoveredIndex !== selectedIndex) {
+      highlightStar(hoveredIndex, false);
+    }
+    renderer.domElement.style.cursor = newHover >= 0 ? 'pointer' : 'grab';
+  }
+}
+
+function highlightStar(idx, selected) {
+  const p = PEOPLE[idx];
+  const mesh = p._mesh;
+  mesh.scale.setScalar(selected ? 1.8 : 1.4);
+  if (idx >= 12) p._label.style.opacity = '1';
+}
+
+function unhighlightStar(idx) {
+  const p = PEOPLE[idx];
+  p._mesh.scale.setScalar(1);
+  if (idx >= 12) p._label.style.opacity = '0';
+}
+
+function onPointerDown(e) {
+  isPointerDown = true;
+  pointerMoved = false;
+}
+
+function onPointerUp(e) {
+  isPointerDown = false;
+  if (!pointerMoved && e.button === 0) {
+    if (hoveredIndex >= 0) {
+      selectStar(hoveredIndex);
+    } else {
+      clearSelection();
+    }
+  }
+}
+
+function selectStar(idx) {
+  if (selectedIndex >= 0 && selectedIndex !== idx) {
+    unhighlightStar(selectedIndex);
+  }
+  selectedIndex = idx;
+  highlightStar(idx, true);
+  showInfo(idx);
+  flyTo(idx);
+  highlightListItem(idx);
+}
+
+function clearSelection() {
+  if (selectedIndex >= 0) {
+    unhighlightStar(selectedIndex);
+    selectedIndex = -1;
+  }
+  hideInfo();
+  clearListHighlight();
+}
+
+/* ─── Info panel ─── */
+const infoPanel = document.getElementById('info-panel');
+
+function showInfo(idx) {
+  const p = PEOPLE[idx];
+  const cat = CATEGORIES[p.cat];
+  document.getElementById('info-rank').textContent = `#${p.rank} of 50`;
+  document.getElementById('info-name').textContent = p.name;
+  document.getElementById('info-nw').textContent = `$${p.nw}B`;
+  document.getElementById('info-nw').style.color = cat.color;
+  document.getElementById('info-company').textContent = p.co;
+  document.getElementById('info-country').textContent = p.country;
+  document.getElementById('info-cat-dot').style.background = cat.color;
+  document.getElementById('info-cat-dot').style.boxShadow = `0 0 6px ${cat.color}`;
+  document.getElementById('info-cat-text').textContent = p.cat;
+  infoPanel.classList.add('visible');
+}
+
+function hideInfo() {
+  infoPanel.classList.remove('visible');
+}
+
+document.getElementById('info-close').addEventListener('click', clearSelection);
+
+/* ─── Camera fly-to ─── */
+let flyTarget = null;
+let flyStart = null;
+let flyProgress = 0;
+let flyDuration = 1.4;
+
+function flyTo(idx) {
+  const pos = positions[idx];
+  const r = PEOPLE[idx]._mesh.userData.baseRadius;
+  const dist = Math.max(r * 6, 18);
+  const dir = camera.position.clone().sub(pos).normalize();
+  flyTarget = {
+    camPos: pos.clone().add(dir.multiplyScalar(dist)),
+    ctrlTarget: pos.clone(),
+  };
+  flyStart = {
+    camPos: camera.position.clone(),
+    ctrlTarget: controls.target.clone(),
+  };
+  flyProgress = 0;
+  controls.autoRotate = false;
+}
+
+function updateFly(dt) {
+  if (!flyTarget) return;
+  flyProgress += dt / flyDuration;
+  const t = easeInOut(Math.min(flyProgress, 1));
+  camera.position.lerpVectors(flyStart.camPos, flyTarget.camPos, t);
+  controls.target.lerpVectors(flyStart.ctrlTarget, flyTarget.ctrlTarget, t);
+  if (flyProgress >= 1) flyTarget = null;
+}
+
+function easeInOut(t) {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
+/* ─── Legend ─── */
+(function buildLegend() {
+  const rows = document.getElementById('legend-rows');
+  usedCats.forEach(cat => {
+    const cfg = CATEGORIES[cat];
+    const row = document.createElement('div');
+    row.className = 'legend-row';
+    row.innerHTML = `<div class="legend-dot" style="background:${cfg.color};box-shadow:0 0 6px ${cfg.color}80"></div><span class="legend-label">${cat}</span>`;
+    rows.appendChild(row);
+  });
+})();
+
+/* ─── Sidebar list ─── */
+const listContainer = document.getElementById('list-container');
+const searchInput = document.getElementById('search');
+let listItems = [];
+
+function buildList(filter = '') {
+  listContainer.innerHTML = '';
+  listItems = [];
+  const q = filter.toLowerCase();
+  PEOPLE.filter(p => p.name.toLowerCase().includes(q)).forEach(p => {
+    const cat = CATEGORIES[p.cat];
+    const item = document.createElement('div');
+    item.className = 'list-item';
+    item.dataset.index = p.rank - 1;
+    item.innerHTML = `
+      <span class="list-rank">${p.rank}</span>
+      <span class="list-dot" style="background:${cat.color};box-shadow:0 0 5px ${cat.color}80;color:${cat.color}"></span>
+      <span class="list-name">${p.name}</span>
+      <span class="list-nw">$${p.nw}B</span>
+    `;
+    item.addEventListener('click', () => selectStar(p.rank - 1));
+    listContainer.appendChild(item);
+    listItems.push(item);
+  });
+}
+
+function highlightListItem(idx) {
+  listItems.forEach(el => el.classList.remove('active'));
+  const match = listItems.find(el => parseInt(el.dataset.index) === idx);
+  if (match) {
+    match.classList.add('active');
+    match.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+function clearListHighlight() {
+  listItems.forEach(el => el.classList.remove('active'));
+}
+
+buildList();
+searchInput.addEventListener('input', e => buildList(e.target.value));
+
+/* ─── Sidebar toggle ─── */
+const sidebar = document.getElementById('sidebar');
+const toggleBtn = document.getElementById('sidebar-toggle');
+let sidebarOpen = true;
+
+toggleBtn.addEventListener('click', () => {
+  sidebarOpen = !sidebarOpen;
+  sidebar.classList.toggle('collapsed', !sidebarOpen);
+  toggleBtn.classList.toggle('open', sidebarOpen);
+  toggleBtn.style.right = sidebarOpen ? '240px' : '0';
+  toggleBtn.textContent = sidebarOpen ? 'Hide' : 'List';
+  // reflow disclaimer
+  document.getElementById('disclaimer').style.right = sidebarOpen ? '250px' : '10px';
+});
+
+/* ─── Resize ─── */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* ─── Event listeners ─── */
+renderer.domElement.addEventListener('pointermove', onPointerMove);
+renderer.domElement.addEventListener('pointerdown', onPointerDown);
+renderer.domElement.addEventListener('pointerup', onPointerUp);
+renderer.domElement.style.cursor = 'grab';
+
+/* ─── Animate ─── */
+let prevTime = performance.now();
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const dt = (now - prevTime) / 1000;
+  prevTime = now;
+
+  controls.update();
+  updateFly(dt);
+
+  // Subtle star pulse
+  const t = clock.getElapsedTime();
+  starMeshes.forEach((mesh, i) => {
+    if (i === selectedIndex || i === hoveredIndex) return;
+    const pulse = 1 + 0.04 * Math.sin(t * 1.2 + i * 0.9);
+    mesh.scale.setScalar(pulse);
+  });
+
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+
+animate();
+</script>
+</body>
+</html>
