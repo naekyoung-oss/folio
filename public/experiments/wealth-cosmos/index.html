@@ -413,12 +413,16 @@ function setView(v){
   v==='cosmos' ? startCosmos() : layoutLineup();
 }
 
-// ---------- refresh: simulate a live market tick ----------
-// Real Forbes figures aren't available from a static page, so each refresh
-// jitters every fortune ±2% around its true base value (it fluctuates rather
-// than drifts) to mimic a live market, then re-renders.
+// ---------- refresh: pull live Forbes data, fall back to a simulated tick ----------
+// Forbes' Real-Time Billionaires endpoint blocks cross-origin requests, so we
+// route through a public CORS proxy. If every proxy fails (rate limit, outage,
+// format change) we jitter the base figures ±2% so the button always does
+// something visible and the page never looks broken.
 const BASE_WORTH = PEOPLE.map(p => p.worth);
+const BASE_RANK  = PEOPLE.map(p => p.rank);
 let currentPerson = null;
+
+const normName = s => (s||'').toLowerCase().replace(/&.*$/,'').replace(/[^a-z]/g,'');
 
 function updateLabels(){
   orbs.forEach((el,i)=>{
@@ -427,18 +431,85 @@ function updateLabels(){
     el.querySelector('.lbl').innerHTML = `<b>${p.name}</b>${fmtWorth(p.worth)}`;
   });
 }
-function stampNow(){
-  const el = document.getElementById('stamp');
-  if(el) el.textContent = 'Last updated ' + new Date().toLocaleTimeString();
-}
-function refreshData(){
-  PEOPLE.forEach((p,i)=>{
-    p.worth = Math.round(BASE_WORTH[i] * (1 + (Math.random()-0.5)*0.04)); // ±2%
-  });
+function setStamp(text){ const el = document.getElementById('stamp'); if(el) el.textContent = text; }
+function rerender(){
   updateLabels();
   view==='cosmos' ? startCosmos() : layoutLineup();
-  if(currentPerson) openPanel(currentPerson);   // keep open detail in sync
-  stampNow();
+  if(currentPerson) openPanel(currentPerson);   // keep an open detail panel in sync
+}
+
+async function fetchForbes(){
+  // Trim to the top ~120 with only the fields we need: ~11KB instead of ~42MB,
+  // small enough for a CORS proxy to relay without timing out.
+  const api = 'https://www.forbes.com/forbesapi/person/rtb/0/position/true.json'
+            + '?fields=rank,personName,finalWorth,source&limit=120';
+  const sources = [
+    'https://api.allorigins.win/get?url=' + encodeURIComponent(api),  // wraps JSON in {contents}
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(api),
+  ];
+  for(const url of sources){
+    try{
+      const ctrl = new AbortController();
+      const timer = setTimeout(()=>ctrl.abort(), 9000);
+      const res = await fetch(url, {signal: ctrl.signal});
+      clearTimeout(timer);
+      if(!res.ok) continue;
+      let data = await res.json();
+      if(typeof data.contents === 'string') data = JSON.parse(data.contents); // unwrap /get
+      const list = data?.personList?.personsLists || data?.personsLists;
+      if(Array.isArray(list) && list.length) return list;
+    }catch(_){ /* try the next source */ }
+  }
+  return null;
+}
+
+// Match Forbes entries to our curated bodies by name; Forbes worth is in $M.
+function applyLive(list){
+  const byName = new Map();
+  list.forEach(e=>{ const n = e.personName || e.name; if(n) byName.set(normName(n), e); });
+  let matched = 0;
+  PEOPLE.forEach(p=>{
+    const e = byName.get(normName(p.name));
+    const w = e && (e.finalWorth ?? e.estWorthPrev);
+    if(typeof w === 'number' && w > 0){
+      p.worth = Math.max(1, Math.round(w / 1000));   // $millions -> $billions
+      if(typeof e.rank === 'number') p.rank = e.rank;
+      matched++;
+    }
+  });
+  return matched;
+}
+
+function jitter(){
+  PEOPLE.forEach((p,i)=>{
+    p.worth = Math.round(BASE_WORTH[i] * (1 + (Math.random()-0.5)*0.04)); // ±2%
+    p.rank  = BASE_RANK[i];
+  });
+}
+
+let refreshing = false;
+async function refreshData(){
+  if(refreshing) return;
+  refreshing = true;
+  const btn = document.getElementById('btnRefresh');
+  if(btn){ btn.disabled = true; btn.textContent = '↻ Fetching…'; }
+  const now = () => new Date().toLocaleTimeString();
+  try{
+    const list = await fetchForbes();
+    if(list && applyLive(list) > 0){
+      setStamp(`Live · Forbes Real-Time · ${now()}`);
+    }else{
+      jitter();
+      setStamp(`Live feed unavailable · simulated · ${now()}`);
+    }
+  }catch(_){
+    jitter();
+    setStamp(`Live feed unavailable · simulated · ${now()}`);
+  }finally{
+    rerender();
+    if(btn){ btn.disabled = false; btn.textContent = '↻ Refresh'; }
+    refreshing = false;
+  }
 }
 
 // ---------- detail panel ----------
@@ -462,7 +533,10 @@ function factClean(p){
   const musk = PEOPLE[0].worth;
   const years = Math.round(p.worth * 1e9 / 1000 / 365).toLocaleString();
   if(p.rank === 1){
-    return `The world's first trillionaire. SpaceX's record IPO this week pushed his fortune to about $1.1 trillion — larger than Taiwan's entire economy, and more than triple the next-richest person. Spending $1,000 a day, this fortune would last about ${years} years.`;
+    const lead = p.worth >= 1000
+      ? `The world's first trillionaire — worth about $${(p.worth/1000).toFixed(1)} trillion`
+      : `The richest person on Earth — worth about $${p.worth} billion`;
+    return `${lead}, comfortably ahead of everyone else alive. Spending $1,000 a day, this fortune would last about ${years} years.`;
   }
   const pct = p.worth / musk * 100;
   const pctStr = pct < 1 ? pct.toFixed(1) : Math.round(pct);
@@ -547,7 +621,8 @@ addEventListener('resize', ()=>{
   initStars(); if(reduceMotion) draw();
   view==='cosmos' ? startCosmos() : layoutLineup();
 });
-initStars(); draw(); startCosmos(); stampNow();
+initStars(); draw(); startCosmos();
+setStamp('Showing June 2026 snapshot · tap ↻ Refresh for live data');
 </script>
 </body>
 </html>
